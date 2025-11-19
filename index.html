@@ -26,7 +26,23 @@
     .control { display:flex; flex-direction:column; gap:6px }
     .small { font-size: 13px; color: var(--muted); }
 
+    .actions{display:flex; gap:8px; margin-top:12px}
+    .btn{padding:8px 12px; border-radius:6px; border:1px solid #ddd; background:#fff}
+    .btn.primary{background:#007bff;color:#fff;border-color:#007bff}
+
     .total { font-weight: bold; margin-top: 18px; font-size: 18px }
+
+    /* Modal for compact summary */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:9999}
+    .modal{width:92%; max-width:420px; background:#fff; border-radius:10px; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,0.15)}
+    .modal h2{margin:0 0 8px}
+    .modal .row{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #eee}
+    .modal .footer{display:flex; justify-content:space-between; gap:8px; margin-top:10px}
+
+    /* Compact print-friendly view inside modal */
+    .compact { font-size:15px }
+    .compact .line{display:flex; justify-content:space-between; padding:6px 0}
+    .compact .meta{color:var(--muted); font-size:13px}
 
     /* Mobile tweaks */
     @media (max-width:720px){
@@ -36,7 +52,7 @@
       .controls{flex-direction:row}
       .control{flex:1}
       .page-bottom-padding{height:64px}
-      .mobile-total-bar{position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid #ddd; padding:10px 12px; display:flex; justify-content:space-between; align-items:center}
+      .btn{flex:1}
     }
   </style>
 </head>
@@ -44,7 +60,7 @@
   <h1>Danh sách sản phẩm</h1>
 
   <div class="list" id="product-list">
-    <!-- Added items list -->
+    <!-- base items -->
     <div class="item"><div class="name">Nem tcc (sống)</div><div class="price-line"><div class="price-block"><div class="label-inline">Giá bán</div><div class="value price" data-raw="3800">3.8k</div></div><div class="price-block"><div class="label-inline">Thành tiền</div><div class="value subtotal">0</div></div></div><div class="qty-row"><label>Số lượng <input type="number" class="qty" /></label></div></div>
 
     <div class="item"><div class="name">Nem tcc xù (sống)</div><div class="price-line"><div class="price-block"><div class="label-inline">Giá bán</div><div class="value price" data-raw="4000">4k</div></div><div class="price-block"><div class="label-inline">Thành tiền</div><div class="value subtotal">0</div></div></div><div class="qty-row"><label>Số lượng <input type="number" class="qty" /></label></div></div>
@@ -116,17 +132,27 @@
     </div>
   </div>
 
+  <div class="actions">
+    <button class="btn" id="collapseBtn">Tóm gọn đơn (Popup)</button>
+    <button class="btn primary" id="checkoutBtn">Thanh toán</button>
+  </div>
+
   <div class="total">Tổng tiền: <span id="total">0</span></div>
 
   <div class="page-bottom-padding" aria-hidden="true"></div>
 
-  <div class="mobile-total-bar" id="mobileBar" style="display:none">
-    <div>
-      <div class="small">Tổng</div>
-      <div id="mobile_total" style="font-weight:700">0</div>
-    </div>
-    <div>
-      <button id="checkoutBtn">Thanh toán</button>
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal" role="document" id="modal">
+      <h2>Đơn hàng (tóm gọn)</h2>
+      <div id="compactList" class="compact"></div>
+      <div class="footer">
+        <div class="meta">Ship: <span id="modal_ship">0</span> · Discount: <span id="modal_discount">0</span></div>
+        <div style="font-weight:700">Tổng: <span id="modal_total">0</span></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button class="btn" id="closeModal">Đóng</button>
+      </div>
     </div>
   </div>
 
@@ -150,59 +176,74 @@
       return Number(val) || 0;
     }
 
-    function init() {
-      document.querySelectorAll('.price').forEach(el=>{
-        const raw = parseRaw(el.dataset.raw);
-        el.textContent = formatK(raw);
-      });
-      document.querySelectorAll('.cost_price').forEach(el=>{
-        const raw = parseRaw(el.dataset.raw);
-        el.textContent = formatK(raw);
-      });
-
-      ['ship_fee','discount'].forEach(id=>{
-        const el = document.getElementById(id);
-        const n = parseRaw(el.value || el.dataset.raw);
-        el.dataset.raw = n; el.value = formatVND(n);
-      });
-
-      if (window.matchMedia && window.matchMedia('(max-width:720px)').matches) document.getElementById('mobileBar').style.display='flex';
-
-      // attach events
-      document.querySelectorAll('.qty').forEach(q=>{
-        q.addEventListener('input', calculate);
-      });
+    function init(){
+      document.querySelectorAll('.price').forEach(el=>{ const raw=parseRaw(el.dataset.raw); el.textContent=formatK(raw)});
+      ['ship_fee','discount'].forEach(id=>{ const el=document.getElementById(id); const n=parseRaw(el.value||el.dataset.raw); el.dataset.raw=n; el.value=formatVND(n)});
+      document.querySelectorAll('.qty').forEach(q=>q.addEventListener('input',calculate));
       setupFormattedInput('ship_fee'); setupFormattedInput('discount');
+      document.getElementById('collapseBtn').addEventListener('click',openCompactPopup);
+      document.getElementById('closeModal').addEventListener('click',closeModal);
       calculate();
     }
 
     function calculate(){
-      let total = 0;
+      let total=0;
       document.querySelectorAll('.item').forEach(item=>{
-        const price = parseRaw(item.querySelector('.price').dataset.raw);
-        const qty = parseInt(item.querySelector('.qty').value)||0;
-        const subtotal = price*qty;
-        item.querySelector('.subtotal').textContent = formatK(subtotal);
-        total += subtotal;
+        const price=parseRaw(item.querySelector('.price').dataset.raw);
+        const qty=parseInt(item.querySelector('.qty').value)||0;
+        const subtotal=price*qty;
+        const subEl=item.querySelector('.subtotal'); if(subEl) subEl.textContent=formatK(subtotal);
+        total+=subtotal;
       });
-      const ship = parseRaw(document.getElementById('ship_fee').dataset.raw||document.getElementById('ship_fee').value);
-      const discount = parseRaw(document.getElementById('discount').dataset.raw||document.getElementById('discount').value);
-      const finalTotal = total + ship - discount;
-      document.getElementById('total').textContent = formatK(finalTotal);
-      document.getElementById('mobile_total').textContent = formatK(finalTotal);
+      const ship=parseRaw(document.getElementById('ship_fee').dataset.raw||document.getElementById('ship_fee').value);
+      const discount=parseRaw(document.getElementById('discount').dataset.raw||document.getElementById('discount').value);
     }
 
     function setupFormattedInput(id){
       const el=document.getElementById(id);
-      el.addEventListener('input',(e)=>{
-        const digits=(e.target.value||'').replace(/[^0-9]/g,'');
-        const n=parseInt(digits)||0; e.target.dataset.raw=n; e.target.value=formatVND(n); calculate();
-      });
-      el.addEventListener('focus',(e)=>{ e.target.value=String(e.target.dataset.raw||'0'); setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length,e.target.value.length)}catch(err){}},0); });
-      el.addEventListener('blur',(e)=>{ const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n); calculate(); });
+      el.addEventListener('input',e=>{ const digits=(e.target.value||'').replace(/[^0-9]/g,''); const n=parseInt(digits)||0; e.target.dataset.raw=n; e.target.value=formatVND(n); calculate(); });
+      el.addEventListener('focus',e=>{ e.target.value=String(e.target.dataset.raw||'0'); setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length,e.target.value.length)}catch(err){}},0) });
+      el.addEventListener('blur',e=>{ const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n); calculate(); });
     }
-    document.getElementById('checkoutBtn').addEventListener('click',()=>{ alert('Thanh toán — demo. Total: '+document.getElementById('total').textContent) });
+
+    // Build compact popup content: only items with qty>0, minimal layout for screenshot
+    function openCompactPopup(){
+      const listEl=document.getElementById('compactList'); listEl.innerHTML='';
+      let total=0; let count=0;
+      document.querySelectorAll('.item').forEach(item=>{
+        const name=item.querySelector('.name').textContent.trim();
+        const price=parseRaw(item.querySelector('.price').dataset.raw);
+        const qty=parseInt(item.querySelector('.qty').value)||0;
+        if(qty>0){
+          count++;
+          const subtotal=price*qty; total+=subtotal;
+          const row=document.createElement('div'); row.className='line';
+          row.innerHTML=`<div style="flex:1">${count}. ${escapeHtml(name)} x${qty}</div><div style="min-width:80px; text-align:right">${formatVND(subtotal)}</div>`;
+          listEl.appendChild(row);
+        }
+      });
+
+      // ship & discount
+      const ship=parseRaw(document.getElementById('ship_fee').dataset.raw||document.getElementById('ship_fee').value);
+      const discount=parseRaw(document.getElementById('discount').dataset.raw||document.getElementById('discount').value);
+      document.getElementById('modal_ship').textContent = formatVND(ship);
+      document.getElementById('modal_discount').textContent = formatVND(discount);
+      document.getElementById('modal_total').textContent = formatVND(total + ship - discount);
+
+      // If no items selected, show message
+      if(count===0){ listEl.innerHTML='<div class="meta">Chưa có món nào được chọn.</div>'; }
+
+      // show modal
+      const backdrop=document.getElementById('modalBackdrop'); backdrop.style.display='flex';
+    }
+
+    function closeModal(){ document.getElementById('modalBackdrop').style.display='none'; }
+
+    function escapeHtml(str){ return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // init
     init();
   </script>
 </body>
 </html>
+
