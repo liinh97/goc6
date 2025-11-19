@@ -35,7 +35,6 @@
       .qty{width:56px}
       .controls{flex-direction:row}
       .control{flex:1}
-      .mobile-total-bar{position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid #ddd; padding:10px 12px; display:flex; justify-content:space-between; align-items:center}
       .page-bottom-padding{height:64px}
     }
   </style>
@@ -95,12 +94,6 @@
   <div class="total">Tổng tiền: <span id="total">0</span></div>
 
   <div class="page-bottom-padding" aria-hidden="true"></div>
-  <div class="mobile-total-bar" id="mobileBar" style="display:none">
-    <div>
-      <div class="small">Tổng</div>
-      <div id="mobile_total" style="font-weight:700">0</div>
-    </div>
-  </div>
 
   <script>
     function formatK(num) {
