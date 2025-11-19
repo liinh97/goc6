@@ -130,7 +130,7 @@
     </div>
 
     <div style="margin-left:auto" class="actions">
-      <button class="btn" id="collapseBtn">Tóm gọn</button>
+      <button class="btn" id="collapseBtn">Hoá đơn</button>
     </div>
   </div>
 
@@ -142,12 +142,12 @@
   <!-- Modal -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
     <div class="modal" role="document" id="modal">
-      <h2>Đơn hàng — Tóm gọn</h2>
+      <h2>Hoá đơn</h2>
       <div id="compactList" class="compact" aria-live="polite"></div>
 
       <div class="footer">
         <div class="meta">Ship: <span id="modal_ship">0</span> · Giảm giá: <span id="modal_discount">0</span></div>
-        <div style="font-weight:800">Tổng: <span id="modal_total">0</span> ₫</div>
+        <div style="font-weight:800">Tổng: <span id="modal_total">0</span></div>
       </div>
 
       <div style="display:flex; gap:8px; margin-top:12px">
@@ -190,12 +190,6 @@
     ];
 
     // Utilities
-    function formatK(num) {
-      if (!isFinite(num)) return '0';
-      const k = num / 1000;
-      if (Number.isInteger(k)) return k + 'k';
-      return (Math.round(k * 10) / 10) + 'k';
-    }
     function formatVND(num) {
       if (!isFinite(num)) return '0';
       return new Intl.NumberFormat('vi-VN').format(num);
@@ -221,7 +215,7 @@
         <div class="thumb">Ảnh</div>
         <div class="meta">
           <div class="name">${escapeHtml(name)}</div>
-          <div class="price-line"><div class="label-inline">Giá</div>&nbsp;<div class="value price">${formatK(price)}</div></div>
+          <div class="price-line"><div class="label-inline">Giá</div>&nbsp;<div class="value price">${formatVND(price)}</div></div>
           <div class="qty-row">
             <button class="btn-qty dec" aria-label="Giảm">−</button>
             <input type="number" min="0" class="qty-input" value="0" aria-label="Số lượng ${escapeHtml(name)}" />
