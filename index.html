@@ -20,6 +20,10 @@
     body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding:18px; margin:0; background:#f6f8fb; color:#111 }
     h1{margin:0 0 14px; font-size:20px}
 
+    /* Controls top: only favorite toggle (req) */
+    .top-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+    .top-controls .btn{padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
+
     /* Grid list - default 2 columns (req #4) */
     .list {
       display: grid;
@@ -63,8 +67,22 @@
     .label-inline{font-size:12px; color:var(--muted)}
     .value{font-weight:700}
 
-    /* size selector */
-    .size-select { padding:6px 8px; border-radius:8px; border:1px solid #ddd; background:#fff; font-size:13px; min-width:110px }
+    /* price badge at top-right of card */
+    .price-badge {
+      position:absolute; right:10px; top:10px;
+      background:#fff; border:1px solid var(--card-border); padding:6px 8px; border-radius:8px; font-weight:700;
+      box-shadow: 0 6px 16px rgba(12,24,40,0.04);
+    }
+
+    /* size toggle */
+    .size-toggle {
+      display:inline-flex; gap:6px; align-items:center;
+    }
+    .size-label { padding:6px 8px; border-radius:8px; border:1px solid #eee; background:#fafafa; font-size:13px }
+    .size-btn {
+      padding:6px 8px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:13px;
+    }
+    .size-btn.active { background:var(--accent); color:#fff; border-color:var(--accent) }
 
     /* qty controls */
     .qty-row{display:flex; gap:6px; align-items:center; margin-top:6px}
@@ -84,16 +102,10 @@
     }
     .fav-btn:hover { transform: translateY(-1px); }
 
-    /* subtotal right */
-    .right {
-      display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:110px;
-    }
-    .subtotal { font-weight:700; font-size:14px }
-
-    /* Controls below */
-    .controls { display:flex; gap:12px; align-items:center; margin:12px 0; flex-wrap:wrap }
-    .control { display:flex; gap:8px; align-items:center }
-    .controls input[type="text"]{padding:8px;border-radius:8px;border:1px solid #ddd; min-width:120px}
+    /* Controls bottom: ship, discount, invoice (req: these at bottom) */
+    .bottom-controls { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+    .bottom-controls .control { display:flex; gap:8px; align-items:center }
+    .bottom-controls input[type="text"]{padding:8px;border-radius:8px;border:1px solid #ddd; min-width:120px}
 
     .actions{display:flex; gap:8px; margin-top:6px}
     .btn{padding:10px 14px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
@@ -117,18 +129,13 @@
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
     /* Responsive tweaks */
-    @media (max-width:1100px){
-      .list{grid-template-columns: repeat(2, 1fr);}
-    }
     @media (max-width:820px){
       .list{grid-template-columns: repeat(2, 1fr);}
     }
     @media (max-width:480px){
-      /* small screens: default to 1 column unless not filtering? keep behavior consistent */
       .list:not(.single-column){ grid-template-columns: repeat(2, 1fr); }
       .list.single-column{ grid-template-columns: repeat(1, 1fr); }
       .thumb{width:56px;height:56px}
-      .right{min-width:96px}
     }
 
     .muted{color:var(--muted); font-size:13px}
@@ -138,12 +145,14 @@
 <body>
   <h1>Danh sách sản phẩm</h1>
 
-  <div class="controls">
-    <!-- req #3: move favorites toggle to top -->
-    <div class="control">
-      <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
-    </div>
+  <div class="top-controls">
+    <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
+  </div>
 
+  <div class="list" id="product-list" aria-live="polite"></div>
+
+  <!-- bottom controls -->
+  <div class="bottom-controls" id="bottomControls">
     <div class="control">
       <label class="muted">Phí ship
         <input type="text" id="ship_fee" data-raw="0" value="0" />
@@ -159,8 +168,6 @@
       <button class="btn" id="collapseBtn">Hoá đơn</button>
     </div>
   </div>
-
-  <div class="list" id="product-list"></div>
 
   <div class="summary" aria-live="polite">
     <div class="muted">Món đã chọn: <span id="selectedCount">0</span> · Yêu thích: <span id="favCount">0</span></div>
@@ -199,7 +206,7 @@
       ["Nem chua thường",7000],
       ["Nem chua phomai",9000],
       ["Nem chua vỏ giòn",5000],
-      // Bánh xèo with two sizes (req #5) — small & large (prices chosen reasonably)
+      // Bánh xèo with two sizes (req #5)
       ["Bánh xèo nhật chay", {small:40000, large:60000}],
       ["Gà chiên mắm",35000],
       ["Chân gà rút xương",7000],
@@ -223,8 +230,7 @@
       if (typeof p === 'number') {
         return { name, variants: [{ label: 'M', price: p }] };
       } else if (typeof p === 'object' && p !== null) {
-        // object with named sizes -> convert to variants preserving order
-        const variants = Object.keys(p).map(k => ({ label: k.charAt(0).toUpperCase() + k.slice(1), price: p[k] }));
+        const variants = Object.keys(p).map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), price: p[k] }));
         return { name, variants };
       } else {
         return { name, variants: [{ label: 'M', price: 0 }] };
@@ -254,46 +260,47 @@
 
     function createItemElement(prod){
       const { name, variants } = prod;
-      // default price is first variant
-      const defaultPrice = variants[0].price;
+      const defaultVariant = variants[0];
       const item = document.createElement('div');
       item.className = 'item';
-      item.dataset.price = String(defaultPrice);
+      item.dataset.price = String(defaultVariant.price);
       item.dataset.name = name;
+      // if multiple variants, set toggle visible
+      const hasMultiple = variants.length > 1;
 
-      // build size options
-      const sizeOptions = variants.map(v => `<option value="${v.price}">${escapeHtml(v.label)} — ${formatVND(v.price)} ₫</option>`).join('');
+      // prepare toggle: default to first variant (index 0)
+      const toggleButton = hasMultiple ? `<div class="size-toggle"><span class="size-label" aria-hidden="true">${variants[0].label}</span><button class="size-btn" data-index="0">Small</button></div>` : '';
 
       const isFav = favorites.has(name) ? 'true' : 'false';
 
       item.innerHTML = `
         <div class="thumb">Ảnh</div>
+
         <div class="meta">
           <div class="name">${escapeHtml(name)}</div>
+
           <div class="price-line">
-            <div class="label-inline">Giá</div>&nbsp;<div class="value price">${formatVND(defaultPrice)}</div>
+            <div class="label-inline">Giá</div>&nbsp;<div class="value price">${formatVND(defaultVariant.price)}</div>
           </div>
 
           <div style="display:flex; gap:8px; margin-top:6px; align-items:center">
-            <select class="size-select" aria-label="Chọn cỡ cho ${escapeHtml(name)}">
-              ${sizeOptions}
-            </select>
-
-            <div style="margin-left:auto" class="muted">Đơn vị: <span class="muted small">cái</span></div>
+            ${ !hasMultiple ? `<div class="size-label" aria-hidden="true">${defaultVariant.label}</div>` :
+              `<div class="size-toggle" role="group" aria-label="Chọn cỡ cho ${escapeHtml(name)}">
+                 <div class="size-label" style="margin-right:8px">${variants[0].label}</div>
+                 <button type="button" class="size-btn" data-index="0" aria-pressed="true">${variants[0].label}</button>
+                 <button type="button" class="size-btn" data-index="1" aria-pressed="false">${variants[1].label}</button>
+               </div>`
+            }
           </div>
 
           <div class="qty-row">
             <button class="btn-qty dec" aria-label="Giảm">−</button>
             <input type="number" min="0" class="qty-input" value="0" aria-label="Số lượng ${escapeHtml(name)}" />
             <button class="btn-qty inc" aria-label="Tăng">+</button>
-            <div class="muted" style="margin-left:auto">Thành tiền: <span class="subtotal">0</span></div>
           </div>
         </div>
 
-        <div class="right" aria-hidden="true">
-          <div class="muted"> </div>
-          <div class="subtotal" style="font-size:13px">0</div>
-        </div>
+        <div class="price-badge">${formatVND(defaultVariant.price)} ₫</div>
 
         <button class="fav-btn" aria-pressed="${isFav}" title="Thêm vào yêu thích">★</button>
       `;
@@ -314,8 +321,9 @@
         const q = it.querySelector('.qty-input');
         const favBtn = it.querySelector('.fav-btn');
         const name = it.dataset.name;
-        const sizeSelect = it.querySelector('.size-select');
         const priceNode = it.querySelector('.price');
+        const priceBadge = it.querySelector('.price-badge');
+        const sizeBtns = it.querySelectorAll('.size-btn');
 
         // qty
         inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); });
@@ -336,14 +344,29 @@
           applyFilter();
         });
 
-        // size change -> update price display and dataset price, recalc subtotal/total
-        sizeSelect.addEventListener('change', (e)=>{
-          const newPrice = parseRaw(e.target.value);
-          it.dataset.price = String(newPrice);
-          priceNode.textContent = formatVND(newPrice);
-          // update subtotal based on qty
-          onQtyChange(it);
-        });
+        // size toggle buttons (if exist) — implement as two-button toggle, default index 0 (Small)
+        if(sizeBtns && sizeBtns.length){
+          sizeBtns.forEach(btn=>{
+            btn.addEventListener('click', (e)=>{
+              const idx = Number(btn.dataset.index) || 0;
+              // find product variants
+              const prod = PRODUCTS.find(p => p.name === name);
+              if(!prod) return;
+              const variant = prod.variants[idx] || prod.variants[0];
+              // update aria-pressed states
+              sizeBtns.forEach(b=> b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+              // update displayed label(s)
+              const lbl = it.querySelector('.size-label');
+              if(lbl) lbl.textContent = variant.label;
+              // update dataset price and UI
+              it.dataset.price = String(variant.price);
+              if(priceNode) priceNode.textContent = formatVND(variant.price);
+              if(priceBadge) priceBadge.textContent = formatVND(variant.price) + ' ₫';
+              // recalc subtotal if quantity > 0
+              onQtyChange(it);
+            });
+          });
+        }
       });
 
       calculateAll();
@@ -353,21 +376,12 @@
 
     // init
     function init(){
-      // format ship/discount
-      ['ship_fee','discount'].forEach(id=>{
-        const el=document.getElementById(id);
-        const n=parseRaw(el.value||el.dataset.raw);
-        el.dataset.raw=n;
-        el.value=formatVND(n);
-        setupFormattedInput(id);
-      });
-
       renderList();
 
       document.getElementById('collapseBtn').addEventListener('click', openCompactPopup);
       document.getElementById('closeModal').addEventListener('click', closeModal);
 
-      // favorites UI (moved to top)
+      // favorites UI (top)
       const showFavsBtn = document.getElementById('showFavsBtn');
       showFavsBtn.addEventListener('click', ()=>{
         filterFavsOnly = !filterFavsOnly;
@@ -376,14 +390,22 @@
         applyFilter();
       });
 
-      // on click outside nothing to close (no menu anymore)
+      // format ship/discount inputs
+      ['ship_fee','discount'].forEach(id=>{
+        const el=document.getElementById(id);
+        const n=parseRaw(el.value||el.dataset.raw);
+        el.dataset.raw=n;
+        el.value=formatVND(n);
+        setupFormattedInput(id);
+      });
     }
 
     function onQtyChange(item){
+      // quantity affects totals but per-item "thành tiền" removed as requested;
+      // keep calculation using dataset.price * qty, and grand total displays final.
       const price = parseRaw(item.dataset.price);
       const qty = parseInt(item.querySelector('.qty-input').value)||0;
-      const subtotal = price * qty;
-      item.querySelectorAll('.subtotal').forEach(s=> s.textContent = qty>0 ? formatVND(subtotal) : '0');
+      // no per-item subtotal UI (removed). Recompute totals.
       calculateAll();
     }
 
