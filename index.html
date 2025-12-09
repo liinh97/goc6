@@ -14,6 +14,8 @@
       --radius:10px;
       --shadow: 0 6px 18px rgba(12,24,40,0.06);
       --fav-color: #ffb400;
+      --price-color:#111;
+      --price-font-size:14px;
     }
     *{box-sizing:border-box}
     body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding:18px; margin:0; background:#f6f8fb; color:#111 }
@@ -22,6 +24,7 @@
     .top-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
     .top-controls .btn{padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
 
+    /* list: desktop/tablet default 2 columns */
     .list {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -29,9 +32,7 @@
       margin-bottom: 12px;
       align-items: start;
     }
-    .list.single-column {
-      grid-template-columns: repeat(1, 1fr);
-    }
+    .list.single-column { grid-template-columns: repeat(1, 1fr); }
 
     .item {
       background: var(--card-bg);
@@ -44,6 +45,7 @@
       align-items:flex-start;
       min-height:88px;
       position:relative;
+      overflow:visible;
     }
 
     .thumb {
@@ -53,23 +55,24 @@
       border:1px dashed #eef;
     }
 
-    .meta {
-      flex:1; display:flex; flex-direction:column; gap:6px;
-    }
-    .name { font-weight:700; font-size:14px; line-height:1.1; }
+    /* allow meta to shrink on small screens to avoid overflow */
+    .meta { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .name { font-weight:700; font-size:14px; line-height:1.1; overflow-wrap: anywhere; }
     .price-line{display:flex; gap:8px; align-items:center; font-size:13px}
     .label-inline{font-size:12px; color:var(--muted)}
-    .value{font-weight:700}
+    .value{font-weight:700; color:var(--price-color); font-size:var(--price-font-size)}
 
-    /* price badge (subtotal or unit price) */
+    /* price badge updated: style like .value but badge box */
     .price-badge {
       position:absolute; right:10px; top:10px;
-      background:#fff; border:1px solid var(--card-border); padding:6px 8px; border-radius:8px; font-weight:700;
+      background:#fff; border:1px solid var(--card-border); padding:6px 8px; border-radius:8px;
+      font-weight:700; font-size:var(--price-font-size); color:var(--price-color);
       box-shadow: 0 6px 16px rgba(12,24,40,0.04);
       white-space:nowrap;
+      min-width:56px;
+      text-align:right;
     }
 
-    /* size buttons styled like favorite button (small) */
     .size-group { display:inline-flex; gap:6px; align-items:center; }
     .size-btn {
       background:#fff; border:1px solid var(--card-border); border-radius:8px; padding:6px 8px; cursor:pointer;
@@ -119,11 +122,15 @@
     .compact .meta{color:var(--muted); font-size:13px}
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
-    @media (max-width:820px){ .list{grid-template-columns: repeat(2, 1fr);} }
-    @media (max-width:480px){
-      .list:not(.single-column){ grid-template-columns: repeat(2, 1fr); }
-      .list.single-column{ grid-template-columns: repeat(1, 1fr); }
+    /* Responsive: force 1 column on narrow screens to avoid overlap */
+    @media (max-width: 680px) {
+      .list { grid-template-columns: repeat(1, 1fr); }
+      .price-badge { right:8px; top:8px; padding:6px 6px; font-size:13px; }
       .thumb{width:56px;height:56px}
+    }
+
+    @media (min-width: 681px) and (max-width: 980px) {
+      .list { grid-template-columns: repeat(2, 1fr); }
     }
 
     .muted{color:var(--muted); font-size:13px}
@@ -269,7 +276,7 @@
           </div>
         </div>
 
-        <div class="price-badge">${formatVND(defaultVariant.price)} ₫</div>
+        <div class="price-badge">0 ₫</div>
 
         <button class="fav-btn" aria-pressed="${isFav}" title="Thêm vào yêu thích">★</button>
       `;
@@ -290,6 +297,9 @@
         const priceBadge = it.querySelector('.price-badge');
         const sizeBtns = it.querySelectorAll('.size-btn');
 
+        // initial badge show 0
+        updateBadge(it);
+
         // qty handlers
         inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); updateBadge(it); });
         dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); updateBadge(it); });
@@ -303,25 +313,18 @@
           updateFavCount(); applyFilter();
         });
 
-        // size buttons behave like radio; styled like fav button
+        // size buttons behave like radio
         if(sizeBtns && sizeBtns.length){
           sizeBtns.forEach(btn=>{
             btn.addEventListener('click', (e)=>{
-              // only act if interactive (not the static single label)
               if(btn.getAttribute('aria-pressed') === 'true') return;
               const idx = Number(btn.dataset.index) || 0;
-              // set all siblings to false then true for clicked
-              sizeBtns.forEach(b=>{
-                const isThis = b === btn;
-                b.setAttribute('aria-pressed', isThis ? 'true' : 'false');
-              });
-              // update dataset.price and unit price display
+              sizeBtns.forEach(b=> b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
               const prod = PRODUCTS.find(p => p.name === name);
               if(!prod) return;
               const variant = prod.variants[idx] || prod.variants[0];
               it.dataset.price = String(variant.price);
               if(priceNode) priceNode.textContent = formatVND(variant.price);
-              // update badge according to qty
               updateBadge(it);
               calculateAll();
             });
@@ -342,7 +345,8 @@
       if(qty > 0){
         badge.textContent = formatVND(price * qty) + ' ₫';
       } else {
-        badge.textContent = formatVND(price) + ' ₫';
+        // requirement: default show 0 when qty=0
+        badge.textContent = '0 ₫';
       }
     }
 
@@ -369,7 +373,6 @@
     }
 
     function onQtyChange(item){
-      // simply recalc totals; badge updated by caller
       calculateAll();
     }
 
@@ -391,7 +394,7 @@
       const grand = total + ship - discount;
       document.getElementById('selectedCount').textContent = String(selectedCount);
       document.getElementById('grandTotal').textContent = formatVND(Math.max(0, grand));
-      // also update badges to reflect current state (in case something changed externally)
+      // update badges in case QTY changed externally
       document.querySelectorAll('.item').forEach(updateBadge);
     }
 
