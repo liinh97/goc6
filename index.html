@@ -189,13 +189,10 @@
 
   <script>
     const RAW = [
-      ["Nem TCC (sống)",3800],
-      ["Nem TCC xù (sống)", {Chín:6500, Sống:4000}],
-      ["Nem TCC vỏ giòn (sống)",5000],
-      ["Nem TCC phomai (sống)",11000],
-      ["Nem TCC xù",6500],
-      ["Nem TCC vỏ giòn",7000],
-      ["Nem TCC phomai",13000],
+      ["Nem TCC",3800],
+      ["Nem TCC xù", {Chín:6500, Sống:4000}],
+      ["Nem TCC vỏ giòn", {Chín:7000, Sống:5000}],
+      ["Nem TCC phomai", {Chín:13000, Sống:11000}],
       ["Bánh rán mặn",8000],
       ["Bánh rán phomai",8000],
       ["Nem chua thường",7000],
@@ -231,7 +228,7 @@
       }
     });
 
-    const FAV_INIT = ["Bánh rán mặn"];
+    const FAV_INIT = ["Bánh rán mặn", "Bánh rán phomai", "Nem TCC xù", "Nem TCC vỏ giòn", "Nem TCC phomai", "Chân gà rút xương"];
     let favorites = new Set(FAV_INIT.slice());
     let filterFavsOnly = false;
 
