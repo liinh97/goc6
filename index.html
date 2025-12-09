@@ -152,6 +152,25 @@
 
     .muted{color:var(--muted); font-size:13px}
     .hidden { display:none !important; }
+
+    /* Prevent mobile zoom-on-focus: make touch targets at least 16px font-size on small screens */
+    @media (max-width: 680px) {
+      .qty-input {
+        font-size: 16px;        /* >=16px stops iOS from auto-zooming */
+        height: 40px;           /* tăng chút để không phá layout */
+        padding: 8px;
+      }
+      .quick-btn {
+        font-size: 16px;        /* cũng giữ các nút quick đủ lớn */
+        padding: 8px 10px;
+        min-width: 40px;
+      }
+    }
+    
+    /* Optional safety for other browsers */
+    html, body, input, button {
+      -webkit-text-size-adjust: 100%; /* avoid unexpected text size changes */
+    }
   </style>
 </head>
 <body>
@@ -288,7 +307,7 @@
 
           <div class="qty-row">
             <button class="btn-qty dec" aria-label="Giảm">−</button>
-            <input type="number" min="0" class="qty-input" value="0" aria-label="Số lượng ${escapeHtml(name)}" />
+            <input type="number" min="0" class="qty-input" value="0" aria-label="Số lượng ${escapeHtml(name)}" inputmode="numeric" pattern="[0-9]*" />
             <button class="btn-qty inc" aria-label="Tăng">+</button>
 
             <!-- quick qty buttons -->
