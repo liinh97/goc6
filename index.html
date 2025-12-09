@@ -14,6 +14,7 @@
       --accent:#0b84ff;
       --radius:10px;
       --shadow: 0 6px 18px rgba(12,24,40,0.06);
+      --fav-color: #ffb400;
     }
     /* Reset-ish */
     *{box-sizing:border-box}
@@ -26,6 +27,12 @@
       grid-template-columns: repeat(4, 1fr);
       gap: var(--gap);
       margin-bottom: 12px;
+      align-items: start;
+    }
+
+    /* When filtering favorites: show single column (full width items) */
+    .list.single-column {
+      grid-template-columns: repeat(1, 1fr);
     }
 
     /* Card */
@@ -39,6 +46,7 @@
       gap:10px;
       align-items:flex-start;
       min-height:88px;
+      position:relative;
     }
 
     .thumb {
@@ -61,6 +69,15 @@
     .qty-input{width:58px; padding:6px; border-radius:6px; border:1px solid #ddd; text-align:center}
     .btn-qty{padding:6px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer}
 
+    /* favorite button */
+    .fav-btn {
+      position:absolute; top:10px; right:10px;
+      background:transparent; border:none; cursor:pointer; font-size:18px; line-height:1;
+      padding:6px; border-radius:8px;
+    }
+    .fav-btn[aria-pressed="true"]{ color: var(--fav-color); transform:scale(1.05); }
+    .fav-btn[aria-pressed="false"]{ color:#cfcfcf; }
+
     /* subtotal right */
     .right {
       display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:110px;
@@ -75,6 +92,11 @@
     .actions{display:flex; gap:8px; margin-top:6px}
     .btn{padding:10px 14px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
     .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+    .btn.toggle.active{background:#f0f8ff; border-color:var(--accent); color:var(--accent)}
+
+    .fav-menu { position:relative; display:inline-block; }
+    .fav-menu .menu-panel { display:none; position:absolute; right:0; top:calc(100% + 8px); background:#fff; border:1px solid #eee; padding:8px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); z-index:10; min-width:160px }
+    .fav-menu.open .menu-panel { display:block; }
 
     .summary {
       margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:12px;
@@ -88,7 +110,7 @@
     .modal{width:100%; max-width:520px; background:#fff; border-radius:12px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,0.25)}
     .modal h2{margin:0 0 8px; font-size:18px}
     .compact { font-size:16px }
-    .compact .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f0f0}
+    .compact .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f4f0}
     .compact .meta{color:var(--muted); font-size:13px}
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
@@ -100,22 +122,20 @@
       .list{grid-template-columns: repeat(2, 1fr);}
     }
     @media (max-width:480px){
-      .list{grid-template-columns: repeat(2, 1fr);}
+      .list{grid-template-columns: repeat(1, 1fr);}
       .thumb{width:56px;height:56px}
       .right{min-width:96px}
     }
 
     /* small utility */
     .muted{color:var(--muted); font-size:13px}
+    .hidden { display:none !important; }
   </style>
 </head>
 <body>
   <h1>Danh sách sản phẩm</h1>
 
-  <div class="list" id="product-list">
-    <!-- Items: keep original dataset but rendered compact -->
-    <!-- I'll keep your original items but with markup ready for grid -->
-  </div>
+  <div class="list" id="product-list"></div>
 
   <div class="controls">
     <div class="control">
@@ -131,11 +151,21 @@
 
     <div style="margin-left:auto" class="actions">
       <button class="btn" id="collapseBtn">Hoá đơn</button>
+
+      <!-- Favorites toggle and menu -->
+      <div class="fav-menu" id="favMenuRoot">
+        <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
+        <button class="btn" id="favMenuBtn" aria-haspopup="true" aria-expanded="false">⋯</button>
+        <div class="menu-panel" id="favMenuPanel" role="menu" aria-hidden="true">
+          <button class="btn" id="clearFavsBtn" style="width:100%; margin-bottom:6px">Bỏ chọn tất cả</button>
+          <button class="btn" id="showAllBtn" style="width:100%">Hiện tất cả</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="summary" aria-live="polite">
-    <div class="muted">Món đã chọn: <span id="selectedCount">0</span></div>
+    <div class="muted">Món đã chọn: <span id="selectedCount">0</span> · Yêu thích: <span id="favCount">0</span></div>
     <div class="total">Tổng: <span id="grandTotal">0</span> ₫</div>
   </div>
 
@@ -189,6 +219,13 @@
       ["Canh mọc chay",60000],
     ];
 
+    // Favorites stored in-memory (not persisted). Include "Bánh rán mặn" by default.
+    const FAV_INIT = ["Bánh rán mặn"];
+    let favorites = new Set(FAV_INIT.slice());
+
+    // Flag to show only favorites
+    let filterFavsOnly = false;
+
     // Utilities
     function formatVND(num) {
       if (!isFinite(num)) return '0';
@@ -205,11 +242,14 @@
 
     // Build list programmatically so it's easy to maintain
     const listRoot = document.getElementById('product-list');
-    PRODUCTS.forEach((p, idx) => {
-      const [name, price] = p;
+
+    function createItemElement(name, price){
       const item = document.createElement('div');
       item.className = 'item';
       item.dataset.price = String(price);
+      item.dataset.name = name;
+
+      const isFav = favorites.has(name) ? 'true' : 'false';
 
       item.innerHTML = `
         <div class="thumb">Ảnh</div>
@@ -227,9 +267,51 @@
           <div class="muted">Đơn vị</div>
           <div class="subtotal" style="font-size:13px">0</div>
         </div>
+        <button class="fav-btn" aria-pressed="${isFav}" title="Thêm vào yêu thích">★</button>
       `;
-      listRoot.appendChild(item);
-    });
+      return item;
+    }
+
+    // render all items
+    function renderList(){
+      listRoot.innerHTML = '';
+      PRODUCTS.forEach(p => {
+        const [name, price] = p;
+        const el = createItemElement(name, price);
+        listRoot.appendChild(el);
+      });
+
+      // attach events
+      document.querySelectorAll('.item').forEach(it=>{
+        const inc = it.querySelector('.inc');
+        const dec = it.querySelector('.dec');
+        const q = it.querySelector('.qty-input');
+        const favBtn = it.querySelector('.fav-btn');
+        const name = it.dataset.name;
+
+        inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); });
+        dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); });
+        q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); });
+
+        favBtn.addEventListener('click', ()=>{
+          const pressed = favBtn.getAttribute('aria-pressed') === 'true';
+          if(pressed){
+            favorites.delete(name);
+            favBtn.setAttribute('aria-pressed','false');
+          } else {
+            favorites.add(name);
+            favBtn.setAttribute('aria-pressed','true');
+          }
+          // NOTE: in-memory only — not persisted across reloads
+          updateFavCount();
+          applyFilter(); // re-evaluate visibility if filter active
+        });
+      });
+
+      calculateAll();
+      updateFavCount();
+      applyFilter();
+    }
 
     // Init formatting and events
     function init(){
@@ -242,20 +324,54 @@
         setupFormattedInput(id);
       });
 
-      // qty events
-      document.querySelectorAll('.item').forEach(it=>{
-        const inc = it.querySelector('.inc');
-        const dec = it.querySelector('.dec');
-        const q = it.querySelector('.qty-input');
-        inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); });
-        dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); });
-        q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); });
-      });
+      renderList();
 
       document.getElementById('collapseBtn').addEventListener('click', openCompactPopup);
       document.getElementById('closeModal').addEventListener('click', closeModal);
 
-      calculateAll();
+      // favorites UI
+      const showFavsBtn = document.getElementById('showFavsBtn');
+      showFavsBtn.addEventListener('click', ()=>{
+        filterFavsOnly = !filterFavsOnly;
+        showFavsBtn.classList.toggle('active', filterFavsOnly);
+        showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
+        applyFilter();
+      });
+
+      // menu toggle
+      const favMenuRoot = document.getElementById('favMenuRoot');
+      const favMenuBtn = document.getElementById('favMenuBtn');
+      const favMenuPanel = document.getElementById('favMenuPanel');
+      favMenuBtn.addEventListener('click', (e)=>{
+        const open = favMenuRoot.classList.toggle('open');
+        favMenuPanel.setAttribute('aria-hidden', String(!open));
+        favMenuBtn.setAttribute('aria-expanded', String(open));
+      });
+      // menu actions
+      document.getElementById('clearFavsBtn').addEventListener('click', ()=>{
+        favorites.clear();
+        renderList();
+        favMenuRoot.classList.remove('open');
+      });
+      document.getElementById('showAllBtn').addEventListener('click', ()=>{
+        filterFavsOnly = false;
+        document.getElementById('showFavsBtn').classList.remove('active');
+        document.getElementById('showFavsBtn').setAttribute('aria-pressed','false');
+        applyFilter();
+        favMenuRoot.classList.remove('open');
+      });
+
+      // click outside to close menu
+      document.addEventListener('click', (e)=>{
+        if(!favMenuRoot.contains(e.target)){
+          favMenuRoot.classList.remove('open');
+          favMenuPanel.setAttribute('aria-hidden','true');
+          favMenuBtn.setAttribute('aria-expanded','false');
+        }
+      });
+
+      // on load apply filter if toggled
+      applyFilter();
     }
 
     function onQtyChange(item){
@@ -271,6 +387,8 @@
       let total = 0;
       let selectedCount = 0;
       document.querySelectorAll('.item').forEach(item=>{
+        // If filter enabled, only count visible favorites
+        if(filterFavsOnly && !favorites.has(item.dataset.name)) return;
         const price = parseRaw(item.dataset.price);
         const qty = parseInt(item.querySelector('.qty-input').value)||0;
         const subtotal = price * qty;
@@ -304,11 +422,42 @@
       });
     }
 
+    // Apply favorites-only filter: hide non-favs when active and toggle single-column layout
+    function applyFilter(){
+      const anyFavs = favorites.size > 0;
+      document.querySelectorAll('.item').forEach(item=>{
+        const isFav = favorites.has(item.dataset.name);
+        if(filterFavsOnly){
+          if(!isFav) item.classList.add('hidden');
+          else item.classList.remove('hidden');
+        } else {
+          item.classList.remove('hidden');
+        }
+      });
+
+      // toggle single-column mode on list container only when showing favorites-only and there is >=1 fav
+      if(filterFavsOnly && anyFavs){
+        listRoot.classList.add('single-column');
+      } else {
+        listRoot.classList.remove('single-column');
+      }
+
+      // Recalculate totals based on visible items
+      calculateAll();
+      updateFavCount();
+    }
+
+    function updateFavCount(){
+      document.getElementById('favCount').textContent = String(favorites.size);
+    }
+
     // Build compact popup content: only items with qty>0, minimal layout for screenshot
     function openCompactPopup(){
       const listEl=document.getElementById('compactList'); listEl.innerHTML='';
       let total=0; let count=0;
       document.querySelectorAll('.item').forEach(item=>{
+        // respect current filter visibility: if hidden, ignore
+        if(item.classList.contains('hidden')) return;
         const name=item.querySelector('.name').textContent.trim();
         const price=parseRaw(item.dataset.price);
         const qty=parseInt(item.querySelector('.qty-input').value)||0;
