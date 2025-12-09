@@ -16,6 +16,7 @@
       --fav-color: #ffb400;
       --price-color:#111;
       --price-font-size:14px;
+      --quick-btn-bg: #fafafa;
     }
     *{box-sizing:border-box}
     body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding:18px; margin:0; background:#f6f8fb; color:#111 }
@@ -83,6 +84,20 @@
     .qty-row{display:flex; gap:6px; align-items:center; margin-top:6px}
     .qty-input{width:58px; padding:6px; border-radius:6px; border:1px solid #ddd; text-align:center}
     .btn-qty{padding:6px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer}
+
+    /* quick qty buttons */
+    .quick-qty { display:inline-flex; gap:6px; margin-left:8px; align-items:center; }
+    .quick-btn {
+      background: var(--quick-btn-bg);
+      border:1px solid #e9e9e9;
+      padding:6px 8px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:13px;
+      min-width:34px;
+      text-align:center;
+    }
+    .quick-btn:hover { background:#f1f1f1; }
 
     .fav-btn {
       position:absolute; right:10px; bottom:10px;
@@ -275,6 +290,13 @@
             <button class="btn-qty dec" aria-label="Giảm">−</button>
             <input type="number" min="0" class="qty-input" value="0" aria-label="Số lượng ${escapeHtml(name)}" />
             <button class="btn-qty inc" aria-label="Tăng">+</button>
+
+            <!-- quick qty buttons -->
+            <div class="quick-qty" aria-hidden="true">
+              <button type="button" class="quick-btn" data-val="2">2</button>
+              <button type="button" class="quick-btn" data-val="5">5</button>
+              <button type="button" class="quick-btn" data-val="10">10</button>
+            </div>
           </div>
         </div>
 
@@ -298,6 +320,7 @@
         const priceNode = it.querySelector('.price');
         const priceBadge = it.querySelector('.price-badge');
         const sizeBtns = it.querySelectorAll('.size-btn');
+        const quickBtns = it.querySelectorAll('.quick-btn');
 
         // initial badge show 0
         updateBadge(it);
@@ -306,6 +329,20 @@
         inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); updateBadge(it); });
         dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); updateBadge(it); });
         q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); updateBadge(it); });
+
+        // quick qty handlers (set quantity directly)
+        if(quickBtns && quickBtns.length){
+          quickBtns.forEach(btn=>{
+            btn.addEventListener('click', (e)=>{
+              const val = parseInt(btn.dataset.val) || 0;
+              q.value = val;
+              onQtyChange(it);
+              updateBadge(it);
+              // provide a tiny visual feedback: focus the qty input for visibility
+              try { q.focus(); q.setSelectionRange(String(q.value).length, String(q.value).length); } catch(_) {}
+            });
+          });
+        }
 
         // favorite toggle
         favBtn.addEventListener('click', ()=>{
@@ -400,7 +437,6 @@
         const q = item.querySelector('.qty-input');
         if(q){
           q.value = 0;
-          // update badge and per-item state
           updateBadge(item);
         }
       });
