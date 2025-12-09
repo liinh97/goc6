@@ -219,12 +219,12 @@
     const PRODUCTS = RAW.map(entry => {
       const [name, p] = entry;
       if (typeof p === 'number') {
-        return { name, variants: [{ key:'m', label: 'M', price: p }] };
+        return { name, variants: [{ key:'d', label: 'D', price: p }] };
       } else if (typeof p === 'object' && p !== null) {
         const variants = Object.keys(p).map(k => ({ key:k, label: k.charAt(0).toUpperCase() + k.slice(1), price: p[k] }));
         return { name, variants };
       } else {
-        return { name, variants: [{ key:'m', label: 'M', price: 0 }] };
+        return { name, variants: [{ key:'d', label: 'D', price: 0 }] };
       }
     });
 
