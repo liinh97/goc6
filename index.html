@@ -24,7 +24,6 @@
     .top-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
     .top-controls .btn{padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
 
-    /* list: desktop/tablet default 2 columns */
     .list {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -55,14 +54,12 @@
       border:1px dashed #eef;
     }
 
-    /* allow meta to shrink on small screens to avoid overflow */
     .meta { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
-    .name { font-weight:700; font-size:14px; line-height:1.1; overflow-wrap: anywhere; }
+    .name { font-weight:700; font-size:14px; line-height:1.1; overflow-wrap:anywhere; }
     .price-line{display:flex; gap:8px; align-items:center; font-size:13px}
     .label-inline{font-size:12px; color:var(--muted)}
     .value{font-weight:700; color:var(--price-color); font-size:var(--price-font-size)}
 
-    /* price badge updated: style like .value but badge box */
     .price-badge {
       position:absolute; right:10px; top:10px;
       background:#fff; border:1px solid var(--card-border); padding:6px 8px; border-radius:8px;
@@ -115,14 +112,19 @@
     }
     .summary .total { font-weight:800; font-size:16px }
 
-    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:9999; padding:18px}
-    .modal{width:100%; max-width:520px; background:#fff; border-radius:12px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,0.25)}
+    .modal-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,0.45);
+      display:none; align-items:center; justify-content:center; z-index:9999; padding:18px;
+    }
+    .modal{
+      width:100%; max-width:520px; background:#fff; border-radius:12px; padding:16px;
+      box-shadow:0 18px 40px rgba(0,0,0,0.25);
+    }
     .compact { font-size:16px }
     .compact .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f4f0}
     .compact .meta{color:var(--muted); font-size:13px}
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
-    /* Responsive: force 1 column on narrow screens to avoid overlap */
     @media (max-width: 680px) {
       .list { grid-template-columns: repeat(1, 1fr); }
       .price-badge { right:8px; top:8px; padding:6px 6px; font-size:13px; }
@@ -159,6 +161,7 @@
     </div>
 
     <div style="margin-left:auto" class="actions">
+      <button class="btn" id="resetBtn" title="Reset số lượng">Reset</button>
       <button class="btn" id="collapseBtn">Hoá đơn</button>
     </div>
   </div>
@@ -236,6 +239,8 @@
     function parseRaw(val) { if (val == null) return 0; if (typeof val === 'string') { const cleaned = val.replace(/[^0-9\-]/g,''); return parseInt(cleaned) || 0; } return Number(val) || 0; }
 
     const listRoot = document.getElementById('product-list');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modal = document.getElementById('modal');
 
     function createItemElement(prod){
       const { name, variants } = prod;
@@ -345,15 +350,36 @@
       if(qty > 0){
         badge.textContent = formatVND(price * qty) + ' ₫';
       } else {
-        // requirement: default show 0 when qty=0
         badge.textContent = '0 ₫';
       }
     }
 
     function init(){
       renderList();
+
+      // Hoá đơn button -> open modal
       document.getElementById('collapseBtn').addEventListener('click', openCompactPopup);
       document.getElementById('closeModal').addEventListener('click', closeModal);
+
+      // Reset button -> zero all quantities
+      document.getElementById('resetBtn').addEventListener('click', ()=>{
+        resetQuantities();
+      });
+
+      // close modal by clicking backdrop (outside modal)
+      modalBackdrop.addEventListener('click', (e) => {
+        // if click directly on backdrop (not inside modal), close
+        if (e.target === modalBackdrop) {
+          closeModal();
+        }
+      });
+
+      // also allow Esc key to close modal
+      document.addEventListener('keydown', (e) => {
+        if(e.key === 'Escape' && modalBackdrop.style.display === 'flex') {
+          closeModal();
+        }
+      });
 
       const showFavsBtn = document.getElementById('showFavsBtn');
       showFavsBtn.addEventListener('click', ()=>{
@@ -370,6 +396,18 @@
         el.value=formatVND(n);
         setupFormattedInput(id);
       });
+    }
+
+    function resetQuantities(){
+      document.querySelectorAll('.item').forEach(item=>{
+        const q = item.querySelector('.qty-input');
+        if(q){
+          q.value = 0;
+          // update badge and per-item state
+          updateBadge(item);
+        }
+      });
+      calculateAll();
     }
 
     function onQtyChange(item){
@@ -394,7 +432,7 @@
       const grand = total + ship - discount;
       document.getElementById('selectedCount').textContent = String(selectedCount);
       document.getElementById('grandTotal').textContent = formatVND(Math.max(0, grand));
-      // update badges in case QTY changed externally
+      // update badges in case QTY changed
       document.querySelectorAll('.item').forEach(updateBadge);
     }
 
@@ -460,11 +498,15 @@
 
       if(count===0){ listEl.innerHTML='<div class="muted">Chưa có món nào được chọn.</div>'; }
 
-      const backdrop=document.getElementById('modalBackdrop'); backdrop.style.display='flex';
+      modalBackdrop.style.display = 'flex';
+      // focus modal's close button for accessibility
       document.getElementById('closeModal').focus();
     }
 
-    function closeModal(){ document.getElementById('modalBackdrop').style.display='none'; }
+    function closeModal(){
+      modalBackdrop.style.display = 'none';
+    }
+
     function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     init();
