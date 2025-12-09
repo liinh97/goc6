@@ -329,15 +329,18 @@
         dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); updateBadge(it); });
         q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); updateBadge(it); });
 
-        // quick qty handlers (set quantity directly)
+        // quick qty handlers (ADD to the existing quantity)
         if(quickBtns && quickBtns.length){
           quickBtns.forEach(btn=>{
             btn.addEventListener('click', (e)=>{
-              const val = parseInt(btn.dataset.val) || 0;
-              q.value = val;
+              const add = parseInt(btn.dataset.val) || 0;
+              // increment current value by add
+              const current = Math.max(0, parseInt(q.value||0) || 0);
+              const newVal = current + add;
+              q.value = newVal;
               onQtyChange(it);
               updateBadge(it);
-              // provide a tiny visual feedback: focus the qty input for visibility
+              // tiny visual feedback: focus qty input
               try { q.focus(); q.setSelectionRange(String(q.value).length, String(q.value).length); } catch(_) {}
             });
           });
