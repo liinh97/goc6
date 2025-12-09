@@ -7,7 +7,6 @@
   <style>
     :root{
       --gap:12px;
-      --pad:12px;
       --muted:#666;
       --card-bg:#fff;
       --card-border:#e6e9ef;
@@ -20,11 +19,9 @@
     body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding:18px; margin:0; background:#f6f8fb; color:#111 }
     h1{margin:0 0 14px; font-size:20px}
 
-    /* Controls top: only favorite toggle (req) */
     .top-controls { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
     .top-controls .btn{padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer}
 
-    /* Grid list - default 2 columns (req #4) */
     .list {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -32,13 +29,10 @@
       margin-bottom: 12px;
       align-items: start;
     }
-
-    /* When filtering favorites: single column full width */
     .list.single-column {
       grid-template-columns: repeat(1, 1fr);
     }
 
-    /* Card */
     .item {
       background: var(--card-bg);
       border-radius: var(--radius);
@@ -67,29 +61,29 @@
     .label-inline{font-size:12px; color:var(--muted)}
     .value{font-weight:700}
 
-    /* price badge at top-right of card */
+    /* price badge (subtotal or unit price) */
     .price-badge {
       position:absolute; right:10px; top:10px;
       background:#fff; border:1px solid var(--card-border); padding:6px 8px; border-radius:8px; font-weight:700;
       box-shadow: 0 6px 16px rgba(12,24,40,0.04);
+      white-space:nowrap;
     }
 
-    /* size toggle */
-    .size-toggle {
-      display:inline-flex; gap:6px; align-items:center;
-    }
-    .size-label { padding:6px 8px; border-radius:8px; border:1px solid #eee; background:#fafafa; font-size:13px }
+    /* size buttons styled like favorite button (small) */
+    .size-group { display:inline-flex; gap:6px; align-items:center; }
     .size-btn {
-      padding:6px 8px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:13px;
+      background:#fff; border:1px solid var(--card-border); border-radius:8px; padding:6px 8px; cursor:pointer;
+      font-size:13px; box-shadow: 0 6px 12px rgba(12,24,40,0.03);
     }
-    .size-btn.active { background:var(--accent); color:#fff; border-color:var(--accent) }
+    .size-btn[aria-pressed="true"] {
+      background:var(--fav-color); color:#fff; border-color: rgba(0,0,0,0.06);
+      transform: translateY(-1px);
+    }
 
-    /* qty controls */
     .qty-row{display:flex; gap:6px; align-items:center; margin-top:6px}
     .qty-input{width:58px; padding:6px; border-radius:6px; border:1px solid #ddd; text-align:center}
     .btn-qty{padding:6px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer}
 
-    /* favorite button moved to bottom-right and styled like a button (req #1) */
     .fav-btn {
       position:absolute; right:10px; bottom:10px;
       background:#fff; border:1px solid var(--card-border); border-radius:8px; padding:6px 8px;
@@ -102,7 +96,6 @@
     }
     .fav-btn:hover { transform: translateY(-1px); }
 
-    /* Controls bottom: ship, discount, invoice (req: these at bottom) */
     .bottom-controls { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
     .bottom-controls .control { display:flex; gap:8px; align-items:center }
     .bottom-controls input[type="text"]{padding:8px;border-radius:8px;border:1px solid #ddd; min-width:120px}
@@ -119,19 +112,14 @@
     }
     .summary .total { font-weight:800; font-size:16px }
 
-    /* Modal */
     .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:9999; padding:18px}
     .modal{width:100%; max-width:520px; background:#fff; border-radius:12px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,0.25)}
-    .modal h2{margin:0 0 8px; font-size:18px}
     .compact { font-size:16px }
     .compact .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f4f0}
     .compact .meta{color:var(--muted); font-size:13px}
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
-    /* Responsive tweaks */
-    @media (max-width:820px){
-      .list{grid-template-columns: repeat(2, 1fr);}
-    }
+    @media (max-width:820px){ .list{grid-template-columns: repeat(2, 1fr);} }
     @media (max-width:480px){
       .list:not(.single-column){ grid-template-columns: repeat(2, 1fr); }
       .list.single-column{ grid-template-columns: repeat(1, 1fr); }
@@ -151,7 +139,6 @@
 
   <div class="list" id="product-list" aria-live="polite"></div>
 
-  <!-- bottom controls -->
   <div class="bottom-controls" id="bottomControls">
     <div class="control">
       <label class="muted">Phí ship
@@ -174,7 +161,6 @@
     <div class="total">Tổng: <span id="grandTotal">0</span> ₫</div>
   </div>
 
-  <!-- Modal -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
     <div class="modal" role="document" id="modal">
       <h2>Hoá đơn</h2>
@@ -192,7 +178,6 @@
   </div>
 
   <script>
-    /* --- DATA: normalize to {name, variants:[{label,price}]} --- */
     const RAW = [
       ["Nem TCC (sống)",3800],
       ["Nem TCC xù (sống)",4000],
@@ -206,7 +191,6 @@
       ["Nem chua thường",7000],
       ["Nem chua phomai",9000],
       ["Nem chua vỏ giòn",5000],
-      // Bánh xèo with two sizes (req #5)
       ["Bánh xèo nhật chay", {small:40000, large:60000}],
       ["Gà chiên mắm",35000],
       ["Chân gà rút xương",7000],
@@ -228,33 +212,21 @@
     const PRODUCTS = RAW.map(entry => {
       const [name, p] = entry;
       if (typeof p === 'number') {
-        return { name, variants: [{ label: 'M', price: p }] };
+        return { name, variants: [{ key:'m', label: 'M', price: p }] };
       } else if (typeof p === 'object' && p !== null) {
-        const variants = Object.keys(p).map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), price: p[k] }));
+        const variants = Object.keys(p).map(k => ({ key:k, label: k.charAt(0).toUpperCase() + k.slice(1), price: p[k] }));
         return { name, variants };
       } else {
-        return { name, variants: [{ label: 'M', price: 0 }] };
+        return { name, variants: [{ key:'m', label: 'M', price: 0 }] };
       }
     });
 
-    // Favorites stored in-memory; include Bánh rán mặn by default
     const FAV_INIT = ["Bánh rán mặn"];
     let favorites = new Set(FAV_INIT.slice());
     let filterFavsOnly = false;
 
-    // utils
-    function formatVND(num) {
-      if (!isFinite(num)) return '0';
-      return new Intl.NumberFormat('vi-VN').format(num);
-    }
-    function parseRaw(val) {
-      if (val == null) return 0;
-      if (typeof val === 'string') {
-        const cleaned = val.replace(/[^0-9\-]/g,'');
-        return parseInt(cleaned) || 0;
-      }
-      return Number(val) || 0;
-    }
+    function formatVND(num) { if (!isFinite(num)) return '0'; return new Intl.NumberFormat('vi-VN').format(num); }
+    function parseRaw(val) { if (val == null) return 0; if (typeof val === 'string') { const cleaned = val.replace(/[^0-9\-]/g,''); return parseInt(cleaned) || 0; } return Number(val) || 0; }
 
     const listRoot = document.getElementById('product-list');
 
@@ -265,11 +237,14 @@
       item.className = 'item';
       item.dataset.price = String(defaultVariant.price);
       item.dataset.name = name;
-      // if multiple variants, set toggle visible
       const hasMultiple = variants.length > 1;
 
-      // prepare toggle: default to first variant (index 0)
-      const toggleButton = hasMultiple ? `<div class="size-toggle"><span class="size-label" aria-hidden="true">${variants[0].label}</span><button class="size-btn" data-index="0">Small</button></div>` : '';
+      const sizeHtml = hasMultiple ? `
+        <div class="size-group" role="group" aria-label="Cỡ">
+          <button type="button" class="size-btn" data-index="0" aria-pressed="true">${variants[0].label}</button>
+          <button type="button" class="size-btn" data-index="1" aria-pressed="false">${variants[1].label}</button>
+        </div>
+      ` : `<div class="size-group"><div class="size-btn" aria-pressed="true" style="cursor:default">${variants[0].label}</div></div>`;
 
       const isFav = favorites.has(name) ? 'true' : 'false';
 
@@ -280,17 +255,11 @@
           <div class="name">${escapeHtml(name)}</div>
 
           <div class="price-line">
-            <div class="label-inline">Giá</div>&nbsp;<div class="value price">${formatVND(defaultVariant.price)}</div>
+            <div class="label-inline">Giá đơn vị</div>&nbsp;<div class="value price">${formatVND(defaultVariant.price)}</div>
           </div>
 
           <div style="display:flex; gap:8px; margin-top:6px; align-items:center">
-            ${ !hasMultiple ? `<div class="size-label" aria-hidden="true">${defaultVariant.label}</div>` :
-              `<div class="size-toggle" role="group" aria-label="Chọn cỡ cho ${escapeHtml(name)}">
-                 <div class="size-label" style="margin-right:8px">${variants[0].label}</div>
-                 <button type="button" class="size-btn" data-index="0" aria-pressed="true">${variants[0].label}</button>
-                 <button type="button" class="size-btn" data-index="1" aria-pressed="false">${variants[1].label}</button>
-               </div>`
-            }
+            ${sizeHtml}
           </div>
 
           <div class="qty-row">
@@ -309,12 +278,8 @@
 
     function renderList(){
       listRoot.innerHTML = '';
-      PRODUCTS.forEach(prod => {
-        const el = createItemElement(prod);
-        listRoot.appendChild(el);
-      });
+      PRODUCTS.forEach(prod => { listRoot.appendChild(createItemElement(prod)); });
 
-      // attach events
       document.querySelectorAll('.item').forEach(it=>{
         const inc = it.querySelector('.inc');
         const dec = it.querySelector('.dec');
@@ -325,45 +290,40 @@
         const priceBadge = it.querySelector('.price-badge');
         const sizeBtns = it.querySelectorAll('.size-btn');
 
-        // qty
-        inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); });
-        dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); });
-        q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); });
+        // qty handlers
+        inc.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)+1); onQtyChange(it); updateBadge(it); });
+        dec.addEventListener('click', ()=>{ q.value = Math.max(0, parseInt(q.value||0)-1); onQtyChange(it); updateBadge(it); });
+        q.addEventListener('input', ()=>{ q.value = Math.max(0, parseInt(q.value||0) || 0); onQtyChange(it); updateBadge(it); });
 
         // favorite toggle
         favBtn.addEventListener('click', ()=>{
           const pressed = favBtn.getAttribute('aria-pressed') === 'true';
-          if(pressed){
-            favorites.delete(name);
-            favBtn.setAttribute('aria-pressed','false');
-          } else {
-            favorites.add(name);
-            favBtn.setAttribute('aria-pressed','true');
-          }
-          updateFavCount();
-          applyFilter();
+          if(pressed){ favorites.delete(name); favBtn.setAttribute('aria-pressed','false'); }
+          else { favorites.add(name); favBtn.setAttribute('aria-pressed','true'); }
+          updateFavCount(); applyFilter();
         });
 
-        // size toggle buttons (if exist) — implement as two-button toggle, default index 0 (Small)
+        // size buttons behave like radio; styled like fav button
         if(sizeBtns && sizeBtns.length){
           sizeBtns.forEach(btn=>{
             btn.addEventListener('click', (e)=>{
+              // only act if interactive (not the static single label)
+              if(btn.getAttribute('aria-pressed') === 'true') return;
               const idx = Number(btn.dataset.index) || 0;
-              // find product variants
+              // set all siblings to false then true for clicked
+              sizeBtns.forEach(b=>{
+                const isThis = b === btn;
+                b.setAttribute('aria-pressed', isThis ? 'true' : 'false');
+              });
+              // update dataset.price and unit price display
               const prod = PRODUCTS.find(p => p.name === name);
               if(!prod) return;
               const variant = prod.variants[idx] || prod.variants[0];
-              // update aria-pressed states
-              sizeBtns.forEach(b=> b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
-              // update displayed label(s)
-              const lbl = it.querySelector('.size-label');
-              if(lbl) lbl.textContent = variant.label;
-              // update dataset price and UI
               it.dataset.price = String(variant.price);
               if(priceNode) priceNode.textContent = formatVND(variant.price);
-              if(priceBadge) priceBadge.textContent = formatVND(variant.price) + ' ₫';
-              // recalc subtotal if quantity > 0
-              onQtyChange(it);
+              // update badge according to qty
+              updateBadge(it);
+              calculateAll();
             });
           });
         }
@@ -374,14 +334,23 @@
       applyFilter();
     }
 
-    // init
+    function updateBadge(item){
+      const price = parseRaw(item.dataset.price);
+      const qty = parseInt(item.querySelector('.qty-input').value)||0;
+      const badge = item.querySelector('.price-badge');
+      if(!badge) return;
+      if(qty > 0){
+        badge.textContent = formatVND(price * qty) + ' ₫';
+      } else {
+        badge.textContent = formatVND(price) + ' ₫';
+      }
+    }
+
     function init(){
       renderList();
-
       document.getElementById('collapseBtn').addEventListener('click', openCompactPopup);
       document.getElementById('closeModal').addEventListener('click', closeModal);
 
-      // favorites UI (top)
       const showFavsBtn = document.getElementById('showFavsBtn');
       showFavsBtn.addEventListener('click', ()=>{
         filterFavsOnly = !filterFavsOnly;
@@ -390,7 +359,6 @@
         applyFilter();
       });
 
-      // format ship/discount inputs
       ['ship_fee','discount'].forEach(id=>{
         const el=document.getElementById(id);
         const n=parseRaw(el.value||el.dataset.raw);
@@ -401,11 +369,7 @@
     }
 
     function onQtyChange(item){
-      // quantity affects totals but per-item "thành tiền" removed as requested;
-      // keep calculation using dataset.price * qty, and grand total displays final.
-      const price = parseRaw(item.dataset.price);
-      const qty = parseInt(item.querySelector('.qty-input').value)||0;
-      // no per-item subtotal UI (removed). Recompute totals.
+      // simply recalc totals; badge updated by caller
       calculateAll();
     }
 
@@ -427,6 +391,8 @@
       const grand = total + ship - discount;
       document.getElementById('selectedCount').textContent = String(selectedCount);
       document.getElementById('grandTotal').textContent = formatVND(Math.max(0, grand));
+      // also update badges to reflect current state (in case something changed externally)
+      document.querySelectorAll('.item').forEach(updateBadge);
     }
 
     function setupFormattedInput(id){
@@ -447,7 +413,6 @@
       });
     }
 
-    // apply favorites-only filter and toggle single-column layout as requested
     function applyFilter(){
       const anyFavs = favorites.size > 0;
       document.querySelectorAll('.item').forEach(item=>{
@@ -459,19 +424,13 @@
         }
       });
 
-      if(filterFavsOnly && anyFavs){
-        listRoot.classList.add('single-column');
-      } else {
-        listRoot.classList.remove('single-column');
-      }
+      if(filterFavsOnly && anyFavs) listRoot.classList.add('single-column'); else listRoot.classList.remove('single-column');
 
       calculateAll();
       updateFavCount();
     }
 
-    function updateFavCount(){
-      document.getElementById('favCount').textContent = String(favorites.size);
-    }
+    function updateFavCount(){ document.getElementById('favCount').textContent = String(favorites.size); }
 
     function openCompactPopup(){
       const listEl=document.getElementById('compactList'); listEl.innerHTML='';
