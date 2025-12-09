@@ -295,7 +295,6 @@
             <div class="quick-qty" aria-hidden="true">
               <button type="button" class="quick-btn" data-val="2">2</button>
               <button type="button" class="quick-btn" data-val="5">5</button>
-              <button type="button" class="quick-btn" data-val="10">10</button>
             </div>
           </div>
         </div>
@@ -416,12 +415,16 @@
       });
 
       const showFavsBtn = document.getElementById('showFavsBtn');
+      showFavsBtn.classList.toggle('active', filterFavsOnly);
+      showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
+      applyFilter();
       showFavsBtn.addEventListener('click', ()=>{
         filterFavsOnly = !filterFavsOnly;
         showFavsBtn.classList.toggle('active', filterFavsOnly);
         showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
         applyFilter();
       });
+
 
       ['ship_fee','discount'].forEach(id=>{
         const el=document.getElementById(id);
