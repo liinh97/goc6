@@ -230,7 +230,7 @@
 
     const FAV_INIT = ["Bánh rán mặn", "Bánh rán phomai", "Nem TCC xù", "Nem TCC vỏ giòn", "Nem TCC phomai", "Chân gà rút xương"];
     let favorites = new Set(FAV_INIT.slice());
-    let filterFavsOnly = false;
+    let filterFavsOnly = true;
 
     function formatVND(num) { if (!isFinite(num)) return '0'; return new Intl.NumberFormat('vi-VN').format(num); }
     function parseRaw(val) { if (val == null) return 0; if (typeof val === 'string') { const cleaned = val.replace(/[^0-9\-]/g,''); return parseInt(cleaned) || 0; } return Number(val) || 0; }
