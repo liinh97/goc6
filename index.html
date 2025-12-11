@@ -141,8 +141,10 @@
     .compact { font-size:16px }
     .compact .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f4f0}
     .compact .meta{color:var(--muted); font-size:13px}
-    .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
-
+    /* updated footer layout */
+    .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:12px;}
+    .modal .meta-lines{display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:13px;}
+    .modal .total-line{font-size:16px; text-align:right; min-width:120px;}
     .payment-row{display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap}
     .qr-box { width:140px; height:140px; display:flex; align-items:center; justify-content:center; border:1px solid var(--card-border); border-radius:8px; background:#fff; padding:8px; }
     .cash-box { display:flex; gap:8px; align-items:center; }
@@ -219,8 +221,11 @@
       <div id="compactList" class="compact" aria-live="polite"></div>
       
       <div class="footer">
-        <div class="meta">Ship: <span id="modal_ship">0</span> · Giảm giá: <span id="modal_discount">0</span></div>
-        <div style="font-weight:800">Tổng: <span id="modal_total">0</span></div>
+        <div class="meta-lines">
+          <div class="meta-line">ship: <span id="modal_ship">0đ</span></div>
+          <div class="meta-line">giảm giá: <span id="modal_discount">0đ</span></div>
+        </div>
+        <div class="total-line" style="font-weight:800">tổng: <span id="modal_total">0đ</span></div>
       </div>
 
       <!-- Payment area -->
@@ -231,7 +236,7 @@
           &nbsp;
         </div>
 
-        <div id="qrContainer" class="qr-box" aria-hidden="false" title="Quét mã để thanh toán">
+        <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán">
           <!-- Inline SVG placeholder QR (visual QR placeholder, replace with real QR image or data) -->
           <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mã QR để quét">
             <rect width="120" height="120" fill="#fff"/>
@@ -251,11 +256,11 @@
           </svg>
         </div>
 
-        <div id="cashContainer" class="cash-box hidden" aria-hidden="true" style="margin-left:8px">
+        <div id="cashContainer" class="cash-box" aria-hidden="false" style="margin-left:8px">
           <label class="small-muted">Tiền khách đưa:
             <input id="cash_given" type="text" data-raw="0" value="0" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
           </label>
-          <div class="small-muted">Trả lại: <strong id="change_due">0 ₫</strong></div>
+          <div class="small-muted">Trả lại: <strong id="change_due">0đ</strong></div>
         </div>
       </div>
 
@@ -556,7 +561,7 @@
       });
       el.addEventListener('focus',e=>{
         e.target.value=String(e.target.dataset.raw||'0');
-        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length,e.target.value.length)}catch(err){}},0)
+        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length, e.target.value.length)}catch(err){}},0)
       });
       el.addEventListener('blur',e=>{
         const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n); calculateAll();
@@ -601,10 +606,11 @@
 
       const ship=parseRaw(document.getElementById('ship_fee').dataset.raw||document.getElementById('ship_fee').value);
       const discount=parseRaw(document.getElementById('discount').dataset.raw||document.getElementById('discount').value);
-      document.getElementById('modal_ship').textContent = formatVND(ship) + ' ₫';
-      document.getElementById('modal_discount').textContent = formatVND(discount) + ' ₫';
+      // update footer values with no space and lowercase labels
+      document.getElementById('modal_ship').textContent = formatVND(ship) + 'đ';
+      document.getElementById('modal_discount').textContent = formatVND(discount) + 'đ';
       const grand = Math.max(0, total + ship - discount);
-      document.getElementById('modal_total').textContent = formatVND(grand) + ' ₫';
+      document.getElementById('modal_total').textContent = formatVND(grand) + 'đ';
 
       // prepare payment area
       // default show/hide containers according to selected method
@@ -622,7 +628,7 @@
       // clear cash input for next time
       const cashIn = document.getElementById('cash_given');
       if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
-      document.getElementById('change_due').textContent = formatVND(0) + ' ₫';
+      document.getElementById('change_due').textContent = formatVND(0) + 'đ';
       modalBackdrop.style.display = 'none';
     }
 
@@ -648,7 +654,7 @@
         // reset cash fields
         const cashIn = document.getElementById('cash_given');
         if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
-        document.getElementById('change_due').textContent = formatVND(0) + ' ₫';
+        document.getElementById('change_due').textContent = formatVND(0) + 'đ';
         // optionally you could update the QR to encode the amount; here we just show placeholder
       } else {
         qrC.classList.add('hidden');
@@ -679,7 +685,7 @@
       });
       el.addEventListener('focus', e=>{
         e.target.value=String(e.target.dataset.raw||'0');
-        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length,e.target.value.length)}catch(err){}},0)
+        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length, e.target.value.length)}catch(err){}},0)
       });
       el.addEventListener('blur', e=>{
         const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n);
@@ -693,7 +699,7 @@
       const el = document.getElementById('cash_given');
       const given = el ? parseRaw(el.dataset.raw || el.value) : 0;
       const change = Math.max(0, given - (total || 0));
-      document.getElementById('change_due').textContent = formatVND(change) + ' ₫';
+      document.getElementById('change_due').textContent = formatVND(change) + 'đ';
     }
 
     init();
