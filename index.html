@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Danh sách sản phẩm — Bản gọn đẹp</title>
+  <title>Danh sách sản phẩm — Bản gọn đẹp (QR tích hợp)</title>
   <style>
     :root{
       --gap:12px;
@@ -176,11 +176,14 @@
         min-width: 40px;
       }
     }
-    
+
     /* Optional safety for other browsers */
     html, body, input, button {
       -webkit-text-size-adjust: 100%; /* avoid unexpected text size changes */
     }
+
+    .qr-loading { font-size:13px; color:var(--muted); }
+    .qr-error { color:#b00020; font-size:13px; }
   </style>
 </head>
 <body>
@@ -237,23 +240,10 @@
         </div>
 
         <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán">
-          <!-- Inline SVG placeholder QR (visual QR placeholder, replace with real QR image or data) -->
-          <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mã QR để quét">
-            <rect width="120" height="120" fill="#fff"/>
-            <rect x="10" y="10" width="28" height="28" fill="#111"/>
-            <rect x="82" y="10" width="28" height="28" fill="#111"/>
-            <rect x="10" y="82" width="28" height="28" fill="#111"/>
-            <!-- small blocks to simulate a code -->
-            <rect x="50" y="20" width="8" height="8" fill="#111"/>
-            <rect x="62" y="20" width="6" height="6" fill="#111"/>
-            <rect x="50" y="34" width="6" height="6" fill="#111"/>
-            <rect x="70" y="34" width="6" height="6" fill="#111"/>
-            <rect x="38" y="50" width="6" height="6" fill="#111"/>
-            <rect x="56" y="50" width="6" height="6" fill="#111"/>
-            <rect x="44" y="68" width="6" height="6" fill="#111"/>
-            <rect x="68" y="68" width="8" height="8" fill="#111"/>
-            <rect x="86" y="50" width="6" height="6" fill="#111"/>
-          </svg>
+          <!-- will be replaced with QR image -->
+          <div id="qrContent" style="text-align:center;">
+            <div class="qr-loading">Chưa có mã QR</div>
+          </div>
         </div>
 
         <div id="cashContainer" class="cash-box" aria-hidden="false" style="margin-left:8px">
@@ -614,7 +604,7 @@
 
       // prepare payment area
       // default show/hide containers according to selected method
-      const selectedMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'qr';
+      const selectedMethod = document.querySelector('input[name="payment_method']:checked')?.value || 'qr';
       updatePaymentUI(selectedMethod, grand);
 
       if(count===0){ listEl.innerHTML='<div class="muted">Chưa có món nào được chọn.</div>'; }
@@ -629,6 +619,8 @@
       const cashIn = document.getElementById('cash_given');
       if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
       document.getElementById('change_due').textContent = formatVND(0) + 'đ';
+      // clear QR content (but keep placeholder text)
+      const qrContent = document.getElementById('qrContent'); if(qrContent){ qrContent.innerHTML = '<div class="qr-loading">Chưa có mã QR</div>'; }
       modalBackdrop.style.display = 'none';
     }
 
@@ -643,6 +635,68 @@
       updatePaymentUI(method, total);
     }
 
+    // --- VietQR integration: call API and render image ---
+    async function generateVietQR(amount) {
+      const qrContent = document.getElementById('qrContent');
+      if(!qrContent) return;
+      // show loading
+      qrContent.innerHTML = '<div class="qr-loading">Đang tạo mã QR…</div>';
+
+      // Prepare body according to API provided by user
+      const body = {
+        accountNo: 113366668888,
+        accountName: "QUY VAC XIN PHONG CHONG COVID",
+        acqId: 970415,
+        amount: Number(amount) || 0,
+        addInfo: "Ung Ho Quy Vac Xin",
+        format: "text",
+        template: "compact"
+      };
+
+      try {
+        const resp = await fetch('https://api.vietqr.io/v2/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-client-id': '3a7b7288-956c-46fa-a68e-4e641c564f42',
+            'x-api-key': 'd565ed27-724a-4618-a2ef-ea9822bc9efe'
+          },
+          body: JSON.stringify(body)
+        });
+
+        if(!resp.ok) {
+          const txt = await resp.text().catch(()=>'');
+          qrContent.innerHTML = `<div class="qr-error">Lỗi tạo QR: HTTP ${resp.status}</div>`;
+          console.error('VietQR error', resp.status, txt);
+          return;
+        }
+
+        const data = await resp.json();
+        // expected structure: { code: '00', desc: '...', data: { qrDataURL: 'data:image/png;base64,...', qrCode: '...'} }
+        const payload = data?.data || {};
+        const dataUrl = payload.qrDataURL || payload.qrUrl || (payload.qrCode ? 'data:image/png;base64,' + payload.qrCode : null);
+
+        if(dataUrl) {
+          // show image
+          qrContent.innerHTML = `<img alt="Mã QR" style="max-width:100%; max-height:100%; border-radius:6px;" src="${dataUrl}" />` +
+                               `<div style="margin-top:6px; font-size:12px; color:var(--muted)"><button id=\"copyPayloadBtn\" class=\"btn\" style=\"padding:6px 8px; font-size:12px; margin-top:6px\">Sao chép payload</button></div>`;
+          // attach copy handler if qrCode exists
+          const copyBtn = document.getElementById('copyPayloadBtn');
+          if(copyBtn) copyBtn.addEventListener('click', ()=>{
+            const toCopy = payload.qrCode || payload.qrData || JSON.stringify(payload);
+            try { navigator.clipboard.writeText(String(toCopy)); copyBtn.textContent = 'Đã sao chép'; setTimeout(()=>copyBtn.textContent='Sao chép payload',1500); } catch(err){ alert('Không thể sao chép: '+err); }
+          });
+        } else {
+          qrContent.innerHTML = `<div class="qr-error">Không nhận được dữ liệu QR từ server.</div>`;
+          console.warn('VietQR response', data);
+        }
+
+      } catch (err) {
+        qrContent.innerHTML = `<div class="qr-error">Lỗi tạo QR: ${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
+        console.error('generateVietQR error', err);
+      }
+    }
+
     function updatePaymentUI(method, totalAmount){
       const qrC = document.getElementById('qrContainer');
       const cashC = document.getElementById('cashContainer');
@@ -655,7 +709,15 @@
         const cashIn = document.getElementById('cash_given');
         if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
         document.getElementById('change_due').textContent = formatVND(0) + 'đ';
-        // optionally you could update the QR to encode the amount; here we just show placeholder
+        // call API to generate QR with the computed total amount (VND integer)
+        // if totalAmount is 0, still attempt (some merchants may want explicit amount), but we guard against repeated calls
+        const numericAmount = Number(Math.max(0, Math.round(totalAmount || 0)));
+        // generate QR only if amount > 0 to avoid pointless calls (but user asked to post 79000; we respect computed total)
+        if(numericAmount > 0) {
+          generateVietQR(numericAmount);
+        } else {
+          const qrContent = document.getElementById('qrContent'); if(qrContent) qrContent.innerHTML = '<div class="qr-loading">Số tiền 0đ — không tạo QR tự động</div>';
+        }
       } else {
         qrC.classList.add('hidden');
         qrC.setAttribute('aria-hidden', 'true');
