@@ -221,9 +221,9 @@
       <!-- Payment area -->
       <div class="payment-row" id="paymentRow">
         <div role="radiogroup" aria-label="Phương thức thanh toán" class="small-muted">
-          <label><input type="radio" name="payment_method" value="qr" checked /> QR</label>
+          <label><input type="radio" name="payment_method" value="cash" checked /> Tiền mặt</label>
+          <label><input type="radio" name="payment_method" value="qr"/> QR</label>
           &nbsp;
-          <label><input type="radio" name="payment_method" value="cash" /> Tiền mặt</label>
         </div>
 
         <div id="qrContainer" class="qr-box" aria-hidden="false" title="Quét mã để thanh toán">
@@ -250,7 +250,7 @@
           <label class="small-muted">Tiền khách đưa:
             <input id="cash_given" type="text" data-raw="0" value="0" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
           </label>
-          <div class="small-muted">Thối: <strong id="change_due">0 ₫</strong></div>
+          <div class="small-muted">Trả lại: <strong id="change_due">0 ₫</strong></div>
         </div>
       </div>
 
@@ -278,7 +278,7 @@
       ["Nem chua vỏ giòn",5000],
       ["Bánh xèo nhật chay", {Nhỏ:30000, To:60000}],
       ["Gà chiên mắm",35000],
-      ["Chân gà rút xương",70000],
+      ["Chân gà rút xương",80000],
       ["Thịt chưng mắm tép",35000],
       ["Salad",40000],
       ["Bún thang chay",45000],
