@@ -143,6 +143,11 @@
     .compact .meta{color:var(--muted); font-size:13px}
     .modal .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 
+    .payment-row{display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap}
+    .qr-box { width:140px; height:140px; display:flex; align-items:center; justify-content:center; border:1px solid var(--card-border); border-radius:8px; background:#fff; padding:8px; }
+    .cash-box { display:flex; gap:8px; align-items:center; }
+    .small-muted{color:var(--muted); font-size:13px}
+
     @media (max-width: 680px) {
       .list { grid-template-columns: repeat(1, 1fr); }
       .price-badge { right:8px; top:8px; padding:6px 6px; font-size:13px; }
@@ -212,6 +217,42 @@
     <div class="modal" role="document" id="modal">
       <h2>Hoá đơn</h2>
       <div id="compactList" class="compact" aria-live="polite"></div>
+
+      <!-- Payment area -->
+      <div class="payment-row" id="paymentRow">
+        <div role="radiogroup" aria-label="Phương thức thanh toán" class="small-muted">
+          <label><input type="radio" name="payment_method" value="qr" checked /> QR</label>
+          &nbsp;
+          <label><input type="radio" name="payment_method" value="cash" /> Tiền mặt</label>
+        </div>
+
+        <div id="qrContainer" class="qr-box" aria-hidden="false" title="Quét mã để thanh toán">
+          <!-- Inline SVG placeholder QR (visual QR placeholder, replace with real QR image or data) -->
+          <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mã QR để quét">
+            <rect width="120" height="120" fill="#fff"/>
+            <rect x="10" y="10" width="28" height="28" fill="#111"/>
+            <rect x="82" y="10" width="28" height="28" fill="#111"/>
+            <rect x="10" y="82" width="28" height="28" fill="#111"/>
+            <!-- small blocks to simulate a code -->
+            <rect x="50" y="20" width="8" height="8" fill="#111"/>
+            <rect x="62" y="20" width="6" height="6" fill="#111"/>
+            <rect x="50" y="34" width="6" height="6" fill="#111"/>
+            <rect x="70" y="34" width="6" height="6" fill="#111"/>
+            <rect x="38" y="50" width="6" height="6" fill="#111"/>
+            <rect x="56" y="50" width="6" height="6" fill="#111"/>
+            <rect x="44" y="68" width="6" height="6" fill="#111"/>
+            <rect x="68" y="68" width="8" height="8" fill="#111"/>
+            <rect x="86" y="50" width="6" height="6" fill="#111"/>
+          </svg>
+        </div>
+
+        <div id="cashContainer" class="cash-box hidden" aria-hidden="true" style="margin-left:8px">
+          <label class="small-muted">Tiền khách đưa:
+            <input id="cash_given" type="text" data-raw="0" value="0" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
+          </label>
+          <div class="small-muted">Thối: <strong id="change_due">0 ₫</strong></div>
+        </div>
+      </div>
 
       <div class="footer">
         <div class="meta">Ship: <span id="modal_ship">0</span> · Giảm giá: <span id="modal_discount">0</span></div>
@@ -450,6 +491,10 @@
         applyFilter();
       });
 
+      // Payment controls: radio change + cash input setup
+      document.querySelectorAll('input[name="payment_method"]').forEach(r=>{
+        r.addEventListener('change', onPaymentMethodChange);
+      });
 
       ['ship_fee','discount'].forEach(id=>{
         const el=document.getElementById(id);
@@ -458,6 +503,9 @@
         el.value=formatVND(n);
         setupFormattedInput(id);
       });
+
+      // setup cash input formatting & events
+      setupCashInput();
     }
 
     function resetQuantities(){
@@ -555,7 +603,13 @@
       const discount=parseRaw(document.getElementById('discount').dataset.raw||document.getElementById('discount').value);
       document.getElementById('modal_ship').textContent = formatVND(ship) + ' ₫';
       document.getElementById('modal_discount').textContent = formatVND(discount) + ' ₫';
-      document.getElementById('modal_total').textContent = formatVND(Math.max(0, total + ship - discount)) + ' ₫';
+      const grand = Math.max(0, total + ship - discount);
+      document.getElementById('modal_total').textContent = formatVND(grand) + ' ₫';
+
+      // prepare payment area
+      // default show/hide containers according to selected method
+      const selectedMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'qr';
+      updatePaymentUI(selectedMethod, grand);
 
       if(count===0){ listEl.innerHTML='<div class="muted">Chưa có món nào được chọn.</div>'; }
 
@@ -565,10 +619,82 @@
     }
 
     function closeModal(){
+      // clear cash input for next time
+      const cashIn = document.getElementById('cash_given');
+      if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
+      document.getElementById('change_due').textContent = formatVND(0) + ' ₫';
       modalBackdrop.style.display = 'none';
     }
 
     function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Payment UI handlers
+    function onPaymentMethodChange(e){
+      const method = e.target.value;
+      // recalc using current modal total (read from span)
+      const totalText = document.getElementById('modal_total').textContent || '0';
+      const total = parseRaw(totalText);
+      updatePaymentUI(method, total);
+    }
+
+    function updatePaymentUI(method, totalAmount){
+      const qrC = document.getElementById('qrContainer');
+      const cashC = document.getElementById('cashContainer');
+      if(method === 'qr'){
+        qrC.classList.remove('hidden');
+        qrC.setAttribute('aria-hidden', 'false');
+        cashC.classList.add('hidden');
+        cashC.setAttribute('aria-hidden', 'true');
+        // reset cash fields
+        const cashIn = document.getElementById('cash_given');
+        if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
+        document.getElementById('change_due').textContent = formatVND(0) + ' ₫';
+        // optionally you could update the QR to encode the amount; here we just show placeholder
+      } else {
+        qrC.classList.add('hidden');
+        qrC.setAttribute('aria-hidden', 'true');
+        cashC.classList.remove('hidden');
+        cashC.setAttribute('aria-hidden', 'false');
+        // immediately calculate change using any current cash_given
+        recalcChangeFromCash(totalAmount);
+      }
+    }
+
+    function setupCashInput(){
+      const el = document.getElementById('cash_given');
+      if(!el) return;
+      // initialize
+      el.dataset.raw = parseRaw(el.value || el.dataset.raw);
+      el.value = formatVND(parseRaw(el.dataset.raw));
+      // input formatting similar to ship/discount, but also compute change on input
+      el.addEventListener('input', e=>{
+        const digits=(e.target.value||'').replace(/[^0-9]/g,'');
+        const n=parseInt(digits)||0;
+        e.target.dataset.raw=n;
+        e.target.value=formatVND(n);
+        // modal_total might not be set if modal closed; read it safely
+        const totalText = document.getElementById('modal_total')?.textContent || '0';
+        const total = parseRaw(totalText);
+        recalcChangeFromCash(total);
+      });
+      el.addEventListener('focus', e=>{
+        e.target.value=String(e.target.dataset.raw||'0');
+        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length,e.target.value.length)}catch(err){}},0)
+      });
+      el.addEventListener('blur', e=>{
+        const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n);
+        const totalText = document.getElementById('modal_total')?.textContent || '0';
+        const total = parseRaw(totalText);
+        recalcChangeFromCash(total);
+      });
+    }
+
+    function recalcChangeFromCash(total){
+      const el = document.getElementById('cash_given');
+      const given = el ? parseRaw(el.dataset.raw || el.value) : 0;
+      const change = Math.max(0, given - (total || 0));
+      document.getElementById('change_due').textContent = formatVND(change) + ' ₫';
+    }
 
     init();
   </script>
