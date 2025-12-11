@@ -146,7 +146,27 @@
     .modal .meta-lines{display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:13px;}
     .modal .total-line{font-size:16px; text-align:right; min-width:120px;}
     .payment-row{display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap}
-    .qr-box { width:140px; height:140px; display:flex; align-items:center; justify-content:center; border:1px solid var(--card-border); border-radius:8px; background:#fff; padding:8px; }
+    /* Enlarged QR box placed below footer and centered */
+    .qr-box {
+      width: 220px;
+      height: 220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid var(--card-border);
+      border-radius:8px;
+      background:#fff;
+      padding:8px;
+      margin: 14px auto 0;   /* center horizontally and separate from footer */
+    }
+    /* on larger screens make it even bigger */
+    @media (min-width: 800px) {
+      .qr-box { width: 260px; height: 260px; }
+    }
+    @media (min-width: 1200px) {
+      .qr-box { width: 300px; height: 300px; }
+    }
+
     .cash-box { display:flex; gap:8px; align-items:center; }
     .small-muted{color:var(--muted); font-size:13px}
 
@@ -158,12 +178,13 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error { color: #b00020; font-size:13px; margin-top:8px; }
+    .error { color: #b00020; font-size:13px; margin-top:8px; text-align:center; }
 
     @media (max-width: 680px) {
       .list { grid-template-columns: repeat(1, 1fr); }
       .price-badge { right:8px; top:8px; padding:6px 6px; font-size:13px; }
       .thumb{width:56px;height:56px}
+      .qr-box { width: 180px; height: 180px; margin-top:12px; }
     }
 
     @media (min-width: 681px) and (max-width: 980px) {
@@ -238,16 +259,12 @@
         <div class="total-line" style="font-weight:800">Tổng: <span id="modal_total">0đ</span></div>
       </div>
 
-      <!-- Payment area -->
+      <!-- Payment area (kept above QR so QR is visually separate below) -->
       <div class="payment-row" id="paymentRow">
         <div role="radiogroup" aria-label="Phương thức thanh toán" class="small-muted">
           <label><input type="radio" name="payment_method" value="cash" checked /> Tiền mặt</label>
           <label style="margin-left:10px"><input type="radio" name="payment_method" value="qr"/> QR</label>
           &nbsp;
-        </div>
-
-        <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán">
-          <!-- We'll inject QR image or spinner/error here -->
         </div>
 
         <div id="cashContainer" class="cash-box" aria-hidden="false" style="margin-left:8px">
@@ -256,6 +273,11 @@
           </label>
           <div class="small-muted">Trả lại: <strong id="change_due">0đ</strong></div>
         </div>
+      </div>
+
+      <!-- Enlarged QR display moved below footer to give it space and make image bigger -->
+      <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán">
+        <!-- We'll inject QR image or spinner/error here -->
       </div>
 
       <div id="qrError" class="error hidden" role="alert"></div>
@@ -554,7 +576,7 @@
       });
       el.addEventListener('focus',e=>{
         e.target.value=String(e.target.dataset.raw||'0');
-        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length, e.target.value.length)}catch(err){}},0)
+        setTimeout(()=>{try{e.target.setSelectionRange(e.target.value.length, e.target.setSelectionRange(e.target.value.length, e.target.value.length))}catch(err){}},0)
       });
       el.addEventListener('blur',e=>{
         const n=parseRaw(e.target.value)||parseRaw(e.target.dataset.raw); e.target.dataset.raw=n; e.target.value=formatVND(n); calculateAll();
@@ -605,17 +627,14 @@
       document.getElementById('modal_total').textContent = formatVND(grand) + 'đ';
 
       // prepare payment area
-      // Read checked radio safely (fix selector bug)
       const checked = document.querySelector('input[name="payment_method"]:checked');
       const selectedMethod = checked ? checked.value : 'qr';
       updatePaymentUI(selectedMethod, grand);
 
       // If QR chosen, trigger API call to generate QR and render it
       if(selectedMethod === 'qr' && grand > 0){
-        // show loading & call API
         showQRCodeForAmount(grand);
       } else {
-        // clear QR area (if any)
         clearQrContainer();
       }
 
@@ -626,11 +645,9 @@
     }
 
     function closeModal(){
-      // clear cash input for next time
       const cashIn = document.getElementById('cash_given');
       if(cashIn){ cashIn.dataset.raw = 0; cashIn.value = formatVND(0); }
       document.getElementById('change_due').textContent = formatVND(0) + 'đ';
-      // hide modal and clear QR state
       modalBackdrop.style.display = 'none';
       clearQrContainer();
       hideQrError();
@@ -707,14 +724,11 @@
     }
 
     // ----- QR generation / API call -----
-    // Credentials & endpoint (as you provided)
     const VIETQR_ENDPOINT = 'https://api.vietqr.io/v2/generate';
     const VIETQR_CLIENT_ID = '3a7b7288-956c-46fa-a68e-4e641c564f42';
     const VIETQR_API_KEY = 'd565ed27-724a-4618-a2ef-ea9822bc9efe';
 
-    // Show spinner, call API and render QR
     async function showQRCodeForAmount(amount) {
-      // amount is integer (VND)
       const qrC = document.getElementById('qrContainer');
       const errBox = document.getElementById('qrError');
       hideQrError();
@@ -752,17 +766,15 @@
         }
 
         const json = await res.json();
-
-        // expected format (from your sample): json.data.qrDataURL
         const qrDataURL = json?.data?.qrDataURL;
         const qrCodeText = json?.data?.qrCode;
 
         if(qrDataURL){
-          qrC.innerHTML = `<img src="${qrDataURL}" alt="QR code" style="max-width:100%; max-height:100%; border-radius:6px" />`;
+          // put image, scale to container (cover but keep aspect)
+          qrC.innerHTML = `<img src="${qrDataURL}" alt="QR code" style="max-width:100%; max-height:100%; border-radius:6px; object-fit:contain" />`;
           qrC.setAttribute('aria-label','Mã QR để quét');
         } else if (qrCodeText) {
-          // If only qrCode text present, render using Google Chart as fallback
-          qrC.innerHTML = `<img src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(qrCodeText)}" alt="QR code" style="max-width:100%; max-height:100%; border-radius:6px" />`;
+          qrC.innerHTML = `<img src="https://chart.googleapis.com/chart?cht=qr&chs=500x500&chl=${encodeURIComponent(qrCodeText)}" alt="QR code" style="max-width:100%; max-height:100%; border-radius:6px; object-fit:contain" />`;
         } else {
           throw new Error('Không nhận được dữ liệu QR từ server.');
         }
