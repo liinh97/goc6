@@ -222,10 +222,10 @@
       
       <div class="footer">
         <div class="meta-lines">
-          <div class="meta-line">ship: <span id="modal_ship">0đ</span></div>
-          <div class="meta-line">giảm giá: <span id="modal_discount">0đ</span></div>
+          <div class="meta-line">Phí ship: <span id="modal_ship">0đ</span></div>
+          <div class="meta-line">Giảm giá: <span id="modal_discount">0đ</span></div>
         </div>
-        <div class="total-line" style="font-weight:800">tổng: <span id="modal_total">0đ</span></div>
+        <div class="total-line" style="font-weight:800">Tổng: <span id="modal_total">0đ</span></div>
       </div>
 
       <!-- Payment area -->
@@ -258,7 +258,7 @@
 
         <div id="cashContainer" class="cash-box" aria-hidden="false" style="margin-left:8px">
           <label class="small-muted">Tiền khách đưa:
-            <input id="cash_given" type="text" data-raw="0" value="0" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
+            <input id="cash_given" type="text" data-raw="0" value="0" inputmode="numeric" pattern="[0-9]*" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
           </label>
           <div class="small-muted">Trả lại: <strong id="change_due">0đ</strong></div>
         </div>
