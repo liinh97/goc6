@@ -217,6 +217,11 @@
     <div class="modal" role="document" id="modal">
       <h2>Hoá đơn</h2>
       <div id="compactList" class="compact" aria-live="polite"></div>
+      
+      <div class="footer">
+        <div class="meta">Ship: <span id="modal_ship">0</span> · Giảm giá: <span id="modal_discount">0</span></div>
+        <div style="font-weight:800">Tổng: <span id="modal_total">0</span></div>
+      </div>
 
       <!-- Payment area -->
       <div class="payment-row" id="paymentRow">
@@ -252,11 +257,6 @@
           </label>
           <div class="small-muted">Trả lại: <strong id="change_due">0 ₫</strong></div>
         </div>
-      </div>
-
-      <div class="footer">
-        <div class="meta">Ship: <span id="modal_ship">0</span> · Giảm giá: <span id="modal_discount">0</span></div>
-        <div style="font-weight:800">Tổng: <span id="modal_total">0</span></div>
       </div>
 
       <div style="display:flex; gap:8px; margin-top:12px">
