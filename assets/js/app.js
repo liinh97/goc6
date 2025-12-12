@@ -620,12 +620,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const now = new Date();
       const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const orderName = (orderInput && orderInput.value.trim()) ? orderInput.value.trim() : defaultName;
-      const createdAt = now.toISOString();
-      const displayTime = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+      const createdAt = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
 
       if (items.length === 0) { alert('Chưa có món nào để lưu.'); return; }
 
-      const metadata = { orderName, createdAt, createdAtDisplay: displayTime, items, ship, discount, total };
+      const metadata = { orderName, createdAt, items, ship, discount, total };
 
       const saveBtn = document.getElementById('saveInvoiceBtn');
       const oldTxt = saveBtn ? saveBtn.textContent : null;

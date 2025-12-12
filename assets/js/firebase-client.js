@@ -18,7 +18,6 @@ import {
   orderBy,
   limit as qlimit,
   getDocs,
-  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 let app = null;
@@ -78,8 +77,7 @@ export async function saveInvoice(metadata) {
 
   // attach server timestamp for ordering
   const payload = {
-    ...metadata,
-    createdAtServer: serverTimestamp()
+    ...metadata
   };
 
   const col = collection(db, 'invoices');
