@@ -622,7 +622,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const now = new Date();
       const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const orderName = (orderInput && orderInput.value.trim()) ? orderInput.value.trim() : defaultName;
-      const createdAt = now.toISOString();
       const createdAt = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const status = 1;
 
