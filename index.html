@@ -70,13 +70,19 @@
       <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán"></div>
       <div id="qrError" class="error hidden" role="alert"></div>
 
-      <div style="display:flex; gap:8px; margin-top:12px">
+      <!-- Thêm input tên đơn hàng và nút lưu hoá đơn -->
+      <div style="display:flex; gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap">
+        <label class="small-muted">Tên đơn:
+          <input id="order_name" type="text" placeholder="Mặc định: H:i d-m-y" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:180px; margin-left:6px" />
+        </label>
+
+        <button class="btn" id="saveInvoiceBtn" title="Lưu hoá đơn">Lưu hoá đơn</button>
         <button class="btn" id="closeModal">Đóng</button>
       </div>
     </div>
   </div>
 
   <!-- Import JS đúng chuẩn GitHub Pages -->
-  <script src="./assets/js/app.js?v=1" defer></script>
+  <script type="module" src="./assets/js/app.js?v=2" defer></script>
 </body>
 </html>
