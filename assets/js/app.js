@@ -16,6 +16,8 @@ const firebaseConfig = {
 // Init (no-op nếu đã init)
 FB.initFirebase(firebaseConfig);
 
+let currentInvoiceId = null;
+
 document.addEventListener('DOMContentLoaded', function () {
   // ----- Data + init -----
   const RAW = [
@@ -620,6 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const now = new Date();
       const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const orderName = (orderInput && orderInput.value.trim()) ? orderInput.value.trim() : defaultName;
+      const createdAt = now.toISOString();
       const createdAt = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const status = 1;
 
@@ -631,13 +634,38 @@ document.addEventListener('DOMContentLoaded', function () {
       const oldTxt = saveBtn ? saveBtn.textContent : null;
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...'; }
 
-      // ensure auth then save to Firestore
+      // ensure auth
       if (window.FBClient && typeof window.FBClient.signInAnonymouslyIfNeeded === 'function') {
         await window.FBClient.signInAnonymouslyIfNeeded();
       }
 
-      const saved = await window.FBClient.saveInvoice(metadata);
-      alert('Lưu hoá đơn thành công. ID: ' + saved.id);
+      if (currentInvoiceId) {
+        // editing existing invoice -> ensure status == 1 first
+        const existing = await window.FBClient.getInvoice(currentInvoiceId);
+        if (!existing || !existing.data) {
+          alert('Hoá đơn không tồn tại hoặc đã bị xoá.');
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
+          return;
+        }
+        const st = Number(existing.data.status || 1);
+        if (st !== 1) {
+          alert('Không thể sửa hoá đơn vì trạng thái không phải "Đơn mới".');
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
+          return;
+        }
+        // update (partial)
+        await window.FBClient.updateInvoice(currentInvoiceId, metadata);
+        alert('Cập nhật hoá đơn thành công.');
+      } else {
+        // create new: set status = 1
+        metadata.status = 1;
+        const saved = await window.FBClient.saveInvoice(metadata);
+        currentInvoiceId = saved.id;
+        alert('Lưu hoá đơn thành công. ID: ' + saved.id);
+      }
+
+      // refresh invoice list (if panel open)
+      try { await renderInvoiceList(); } catch(_) {}
 
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
     } catch (err) {
@@ -657,6 +685,205 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.addEventListener('click', saveInvoiceFlow);
     }
   }
+
+  // --- Invoice list UI + logic ---
+  // Ghi chú: dùng window.FBClient.listInvoices() và window.FBClient.getInvoice() (đã expose trong firebase-client.js)
+  async function renderInvoiceList() {
+    const listRoot = document.getElementById('invoiceList');
+    const emptyEl = document.getElementById('invoiceListEmpty');
+    if (!listRoot) return;
+    listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
+    emptyEl.style.display = 'none';
+
+    if (!window.FBClient || typeof window.FBClient.listInvoices !== 'function') {
+      listRoot.innerHTML = '<div class="error">FBClient.listInvoices chưa có — kiểm tra firebase-client.js</div>';
+      return;
+    }
+
+    try {
+      // lấy 20 hoá đơn gần nhất
+      const rows = await window.FBClient.listInvoices({ limit: 20 });
+      listRoot.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      rows.forEach(row => {
+        const id = row.id;
+        const d = row.data || {};
+        const name = d.orderName || '(Không tên)';
+        const time = d.createdAtDisplay || (d.createdAt ? new Date(d.createdAt).toLocaleString('vi-VN') : '');
+        const total = typeof d.total !== 'undefined' ? formatVND(d.total) + ' ₫' : '-';
+        const el = document.createElement('div');
+        el.className = 'item'; // tận dụng style item có sẵn — sẽ nhỏ gọn
+        el.style.padding = '8px';
+        el.style.margin = '6px 0';
+        el.style.display = 'flex';
+        el.style.justifyContent = 'space-between';
+        el.style.alignItems = 'center';
+        el.innerHTML = `
+          <div style="flex:1; min-width:0">
+            <div class="name" style="font-size:14px; font-weight:700; margin-bottom:4px">${escapeHtml(name)}</div>
+            <div class="muted" style="font-size:13px">${escapeHtml(time)}</div>
+          </div>
+          <div style="min-width:120px; text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+            <div style="font-weight:800">${total}</div>
+            <div style="display:flex; gap:6px">
+              <div style="display:flex; gap:6px">
+                <button class="btn small-view" data-id="${id}" style="padding:6px 8px">Xem</button>
+                ${ (d.status === 1) ? `<button class="btn small-edit" data-id="${id}" style="padding:6px 8px">Sửa</button>` : '' }
+                ${ (d.status === 1) ? `<button class="btn small-pay" data-id="${id}" style="padding:6px 8px">Thanh toán</button>` : '' }
+                ${ (d.status === 1) ? `<button class="btn small-cancel" data-id="${id}" style="padding:6px 8px">Huỷ</button>` : '' }
+              </div>
+            </div>
+          </div>
+        `;
+        listRoot.appendChild(el);
+      });
+
+      // attach view handlers
+      // view
+      listRoot.querySelectorAll('.small-view').forEach(btn=>{
+        btn.addEventListener('click', ()=> openInvoiceDetailFallback(btn.dataset.id));
+      });
+
+      // edit -> open modal ready to edit (same as view but ensure editable)
+      listRoot.querySelectorAll('.small-edit').forEach(btn=>{
+        btn.addEventListener('click', ()=> {
+          openInvoiceDetailFallback(btn.dataset.id);
+          // currentInvoiceId is set inside openInvoiceDetailFallback
+        });
+      });
+
+      // pay
+      listRoot.querySelectorAll('.small-pay').forEach(btn=>{
+        btn.addEventListener('click', ()=> {
+          if (!confirm('Xác nhận đánh dấu "Đã thanh toán" cho đơn này?')) return;
+          changeInvoiceStatus(btn.dataset.id, 2);
+        });
+      });
+
+      // cancel
+      listRoot.querySelectorAll('.small-cancel').forEach(btn=>{
+        btn.addEventListener('click', ()=> {
+          if (!confirm('Xác nhận huỷ đơn này?')) return;
+          changeInvoiceStatus(btn.dataset.id, 3);
+        });
+      });
+    } catch (err) {
+      console.error('renderInvoiceList error', err);
+      listRoot.innerHTML = `<div class="error">Lấy danh sách hoá đơn thất bại: ${escapeHtml(err.message || String(err))}</div>`;
+    }
+  }
+
+  function attachInvoiceTabHandlers(){
+    const showInvoicesBtn = document.getElementById('showInvoicesBtn');
+    const invoiceListPanel = document.getElementById('invoiceListPanel');
+    const refreshBtn = document.getElementById('refreshInvoicesBtn');
+
+    if (showInvoicesBtn && invoiceListPanel) {
+      showInvoicesBtn.addEventListener('click', async ()=>{
+        const visible = invoiceListPanel.style.display !== 'none';
+        // toggle panel
+        invoiceListPanel.style.display = visible ? 'none' : 'block';
+        showInvoicesBtn.setAttribute('aria-pressed', String(!visible));
+        if (!visible) {
+          await renderInvoiceList();
+        }
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async ()=> {
+        await renderInvoiceList();
+      });
+    }
+  }
+
+  // fallback: fetch invoice and render basic modal if showInvoiceDetail missing
+  async function openInvoiceDetailFallback(id){
+    try {
+      if (!window.FBClient || typeof window.FBClient.getInvoice !== 'function') {
+        alert('Không thể lấy chi tiết hoá đơn: FBClient.getInvoice không có.');
+        return;
+      }
+      const res = await window.FBClient.getInvoice(id);
+      if (!res || !res.data) {
+        alert('Không tìm thấy hoá đơn.');
+        return;
+      }
+      const data = res.data;
+      currentInvoiceId = id;
+
+      // populate compactList (modal)
+      const listEl = document.getElementById('compactList');
+      listEl.innerHTML = '';
+      const items = data.items || [];
+      items.forEach((it, idx) => {
+        const row = document.createElement('div');
+        row.className = 'line';
+        row.innerHTML = `<div style="flex:1">${idx+1}. ${escapeHtml(it.name)} x${it.qty}</div><div style="min-width:90px; text-align:right">${formatVND(it.subtotal)} ₫</div>`;
+        listEl.appendChild(row);
+      });
+
+      // meta
+      document.getElementById('modal_ship').textContent = formatVND(data.ship||0) + 'đ';
+      document.getElementById('modal_discount').textContent = formatVND(data.discount||0) + 'đ';
+      const grand = data.total || (items.reduce((s,i)=>s+(i.subtotal||0),0) + (data.ship||0) - (data.discount||0));
+      document.getElementById('modal_total').textContent = formatVND(Math.max(0, grand)) + 'đ';
+
+      const orderInput = document.getElementById('order_name');
+      if (orderInput) { orderInput.value = data.orderName || ''; }
+
+      // disable editing if status != 1
+      const status = Number(data.status || 1);
+      const editable = status === 1;
+      if (orderInput) orderInput.disabled = !editable;
+      const saveBtn = document.getElementById('saveInvoiceBtn');
+      if (saveBtn) {
+        saveBtn.disabled = !editable;
+        saveBtn.textContent = editable ? 'Lưu hoá đơn' : (status === 2 ? 'Đã thanh toán - Không thể sửa' : 'Đã huỷ - Không thể sửa');
+      }
+
+      // render fresh QR by calling existing function
+      if (grand > 0) {
+        try { await showQRCodeForAmount(grand); } catch(e){ console.warn(e); }
+      } else {
+        clearQrContainer();
+      }
+
+      // show modal
+      document.getElementById('modalBackdrop').style.display = 'flex';
+      document.getElementById('closeModal').focus();
+    } catch (err) {
+      console.error('openInvoiceDetailFallback', err);
+      alert('Lỗi khi tải chi tiết: ' + (err.message || err));
+    }
+  }
+
+  async function changeInvoiceStatus(id, newStatus) {
+    try {
+      if (!window.FBClient || typeof window.FBClient.updateInvoiceStatus !== 'function') {
+        alert('FBClient.updateInvoiceStatus không khả dụng.');
+        return;
+      }
+      await window.FBClient.signInAnonymouslyIfNeeded?.();
+      await window.FBClient.updateInvoiceStatus(id, newStatus);
+      alert('Cập nhật trạng thái thành công.');
+      // refresh UI
+      await renderInvoiceList().catch(()=>{});
+      // nếu modal đang mở và đó là same invoice, reload detail
+      if (currentInvoiceId === id) {
+        await openInvoiceDetailFallback(id);
+      }
+    } catch (err) {
+      console.error('changeInvoiceStatus', err);
+      alert('Cập nhật trạng thái thất bại: ' + (err.message || err));
+    }
+  }
+
+  attachInvoiceTabHandlers();
 
   // ----- Kick off -----
   init();

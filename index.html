@@ -11,10 +11,24 @@
 <body>
   <h1>Danh sách sản phẩm</h1>
 
-  <div class="top-controls">
-    <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
+  <div class="top-controls" style="align-items:flex-start;">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
+      <button class="btn" id="showInvoicesBtn" aria-pressed="false" title="Danh sách hoá đơn">Hoá đơn</button>
+    </div>
+    <!-- panel hiện danh sách hoá đơn (ẩn mặc định) -->
+    <div id="invoiceListPanel" style="margin-left:16px; display:none; width:420px; max-width:60vw;">
+      <div style="background:#fff;border-radius:10px;padding:8px;border:1px solid #e6e9ef; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong>Danh sách hoá đơn</strong>
+          <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px">Tải lại</button>
+        </div>
+        <div id="invoiceList" style="max-height:320px; overflow:auto;"></div>
+        <div id="invoiceListEmpty" class="muted" style="display:none;padding-top:8px">Chưa có hoá đơn nào.</div>
+      </div>
+    </div>
   </div>
-
+  
   <div class="list" id="product-list" aria-live="polite"></div>
 
   <div class="bottom-controls" id="bottomControls">
