@@ -71,7 +71,8 @@ export async function saveInvoice(metadata) {
   if (!metadata || typeof metadata !== 'object') throw new Error('metadata required');
   const col = collection(db, 'invoices');
   const payload = {
-    ...metadata
+    ...metadata,
+    createdAtServer: serverTimestamp()
   };
   const ref = await addDoc(col, payload);
   return { id: ref.id, ref };
