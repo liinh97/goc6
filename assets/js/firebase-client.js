@@ -68,7 +68,7 @@ export async function signInAnonymouslyIfNeeded() {
 
 /**
  * Save invoice metadata to Firestore (collection: invoices)
- * metadata: { orderName, createdAt, createdAtDisplay, items, ship, discount, total }
+ * metadata: { orderName, createdAt, items, ship, discount, total, status }
  * Returns: { id, refPath }
  */
 export async function saveInvoice(metadata) {
