@@ -1,6 +1,6 @@
 // assets/js/app.js
 // Main app (module) — imports firebase-client as module
-import * as FB from './assets/js/firebase-client.js';
+import * as FB from './firebase-client.js';
 
 // --- Thêm đoạn này: cấu hình và init Firebase (chỉ 1 lần) ---
 const firebaseConfig = {
