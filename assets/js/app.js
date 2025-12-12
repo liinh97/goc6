@@ -518,4 +518,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ----- Kick off -----
     init();
-}
+});
