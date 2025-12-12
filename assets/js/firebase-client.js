@@ -1,58 +1,62 @@
 // assets/js/firebase-client.js
-// Firebase client helper for uploads, JSON storage, and DOM screenshot capture.
+// Firebase helper focused on Firestore + anonymous auth (NO Storage)
+// Usage:
+//   import * as FB from './firebase-client.js';
+//   FB.initFirebase(firebaseConfig);
+//   await FB.signInAnonymouslyIfNeeded();
+//   const res = await FB.saveInvoice(metadata);
 
-// Import Firebase modules (Firebase Web SDK v12+)
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  query,
+  orderBy,
+  limit as qlimit,
+  getDocs,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// Internal state
 let app = null;
 let auth = null;
-let storage = null;
+let db = null;
 let lastInitConfig = null;
 
 /**
- * Initialize Firebase app (if not already).
+ * Init Firebase app (idempotent)
  */
 export function initFirebase(firebaseConfig) {
   if (!firebaseConfig) throw new Error('firebaseConfig required');
-
-  // Warn if storageBucket is suspicious
-  if (firebaseConfig.storageBucket && firebaseConfig.storageBucket.includes('firebasestorage')) {
-    console.warn('[firebase-client] storageBucket nhìn không chuẩn. Dạng chuẩn: "<project-id>.appspot.com"');
-  }
-
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
   } else {
     app = getApps()[0];
   }
-
   auth = getAuth(app);
-  storage = getStorage(app);
+  db = getFirestore(app);
   lastInitConfig = firebaseConfig;
-
-  return { app, auth, storage };
+  return { app, auth, db };
 }
 
 /**
- * Ensure Firebase is initialized.
+ * Ensure initialized
  */
 export function ensureInit(firebaseConfig) {
   if (!app) return initFirebase(firebaseConfig);
-  return { app, auth, storage };
+  return { app, auth, db };
 }
 
 /**
- * Sign in anonymously if user is not yet signed in.
+ * Sign in anonymously if not signed in
  */
 export async function signInAnonymouslyIfNeeded() {
   if (!auth) throw new Error('Firebase not initialized. Call initFirebase() first.');
-
+  if (auth.currentUser) return auth.currentUser;
   return new Promise((resolve, reject) => {
-    if (auth.currentUser) return resolve(auth.currentUser);
-
     signInAnonymously(auth)
       .then(() => {
         onAuthStateChanged(auth, user => {
@@ -64,89 +68,62 @@ export async function signInAnonymouslyIfNeeded() {
 }
 
 /**
- * Upload a Blob (file) to Firebase Storage.
- * Returns { path, url }
+ * Save invoice metadata to Firestore (collection: invoices)
+ * metadata: { orderName, createdAt, createdAtDisplay, items, ship, discount, total }
+ * Returns: { id, refPath }
  */
-export function uploadInvoiceBlob(blob, remotePath, onProgress) {
-  if (!storage) throw new Error('Firebase Storage not initialized. Call initFirebase() first.');
-  if (!blob) throw new Error('blob required for upload');
+export async function saveInvoice(metadata) {
+  if (!db) throw new Error('Firestore not initialized. Call initFirebase() first.');
+  if (!metadata || typeof metadata !== 'object') throw new Error('metadata required');
 
-  const ref = storageRef(storage, remotePath);
-  const uploadTask = uploadBytesResumable(ref, blob);
+  // attach server timestamp for ordering
+  const payload = {
+    ...metadata,
+    createdAtServer: serverTimestamp()
+  };
 
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      snapshot => {
-        if (onProgress) {
-          const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          onProgress(percent, snapshot);
-        }
-      },
-      error => reject(error),
-      async () => {
-        try {
-          const url = await getDownloadURL(ref);
-          resolve({ path: ref.fullPath, url });
-        } catch (err) {
-          reject(err);
-        }
-      }
-    );
-  });
+  const col = collection(db, 'invoices');
+  const docRef = await addDoc(col, payload);
+  return { id: docRef.id, path: `invoices/${docRef.id}` };
 }
 
 /**
- * Upload JSON metadata as a file.
+ * Get invoice by id
+ * Returns document data or null
  */
-export async function uploadJSON(obj, remotePath) {
-  const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
-  return uploadInvoiceBlob(blob, remotePath);
+export async function getInvoice(id) {
+  if (!db) throw new Error('Firestore not initialized. Call initFirebase() first.');
+  if (!id) throw new Error('id required');
+  const d = doc(db, 'invoices', id);
+  const snap = await getDoc(d);
+  if (!snap.exists()) return null;
+  return { id: snap.id, data: snap.data() };
 }
 
 /**
- * Generate a safe invoice filename: invoice_YYYY-MM-DD_HH-mm-ss.pdf
+ * List recent invoices (simple query)
+ * options: { limit: number }
  */
-export function invoiceFileName(prefix = 'invoice', ext = 'pdf') {
-  const t = new Date();
-  const stamp = t.toISOString().replace(/[:.]/g, '-');
-  return `${prefix}_${stamp}.${ext}`;
+export async function listInvoices(opts = {}) {
+  if (!db) throw new Error('Firestore not initialized. Call initFirebase() first.');
+  const lim = Number(opts.limit) || 20;
+  const q = query(collection(db, 'invoices'), orderBy('createdAtServer', 'desc'), qlimit(lim));
+  const snaps = await getDocs(q);
+  const rows = [];
+  snaps.forEach(s => rows.push({ id: s.id, data: s.data() }));
+  return rows;
 }
 
 /**
- * Convert a DOM node to PNG blob (requires html2canvas).
- */
-export async function domNodeToPngBlob(node, scale = 2) {
-  if (!node) throw new Error('node required');
-  if (typeof html2canvas !== 'function') {
-    throw new Error('html2canvas not found. Include html2canvas CDN trước khi gọi domNodeToPngBlob.');
-  }
-
-  const canvas = await html2canvas(node, { scale, useCORS: true, logging: false });
-  return await new Promise(res => canvas.toBlob(res, 'image/png'));
-}
-
-/**
- * Upload blob with anonymous auth auto-handling.
- */
-export async function ensureAuthAndUpload(blob, remotePath, onProgress) {
-  if (!auth) throw new Error('Firebase not initialized. Call initFirebase() first.');
-  if (!auth.currentUser) await signInAnonymouslyIfNeeded();
-  return uploadInvoiceBlob(blob, remotePath, onProgress);
-}
-
-/**
- * Expose all helpers globally for non-module scripts (app.js)
+ * Expose basic API globally for non-module code
  */
 window.FBClient = {
   initFirebase,
   ensureInit,
   signInAnonymouslyIfNeeded,
-  ensureAuthAndUpload,
-  uploadInvoiceBlob,
-  uploadJSON,
-  invoiceFileName,
-  domNodeToPngBlob
+  saveInvoice,
+  getInvoice,
+  listInvoices
 };
 
-console.log("[firebase-client] Loaded & FBClient exposed.");
+console.log('[firebase-client] Firestore-only client loaded (no Storage).');

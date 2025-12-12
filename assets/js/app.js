@@ -605,9 +605,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // main save flow
+  // main save flow (chỉnh: không lưu ảnh QR, không capture)
   async function saveInvoiceFlow() {
     try {
-      // prepare data
       const items = collectInvoiceItems();
       const shipEl = document.getElementById('ship_fee');
       const discountEl = document.getElementById('discount');
@@ -616,111 +616,38 @@ document.addEventListener('DOMContentLoaded', function () {
       const totalText = document.getElementById('modal_total')?.textContent || '0';
       const total = parseRaw(totalText);
 
-      // order name
       const orderInput = document.getElementById('order_name');
       const now = new Date();
-      const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-'); // H:i d-m-y
+      const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
       const orderName = (orderInput && orderInput.value.trim()) ? orderInput.value.trim() : defaultName;
-      const createdAt = now.toISOString(); // store ISO, but we'll also store display string
+      const createdAt = now.toISOString();
       const displayTime = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
 
-      if(items.length === 0){
-        alert('Chưa có món nào để lưu.');
-        return;
-      }
+      if (items.length === 0) { alert('Chưa có món nào để lưu.'); return; }
 
-      // prepare metadata JSON
-      const metadata = {
-        orderName,
-        createdAt,
-        createdAtDisplay: displayTime,
-        items,
-        ship,
-        discount,
-        total
-      };
+      const metadata = { orderName, createdAt, createdAtDisplay: displayTime, items, ship, discount, total };
 
-      // show basic progress UI
       const saveBtn = document.getElementById('saveInvoiceBtn');
       const oldTxt = saveBtn ? saveBtn.textContent : null;
-      if(saveBtn){
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Đang lưu...';
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...'; }
+
+      // ensure auth then save to Firestore
+      if (window.FBClient && typeof window.FBClient.signInAnonymouslyIfNeeded === 'function') {
+        await window.FBClient.signInAnonymouslyIfNeeded();
       }
 
-      // ensure firebase init & auth
-      if(!window.FBClient) throw new Error('FBClient chưa được khởi tạo. Kiểm tra firebase-client.js đã expose window.FBClient chưa.');
-      // if you haven't init elsewhere, you can call:
-      // window.FBClient.initFirebase(firebaseConfig);
+      const saved = await window.FBClient.saveInvoice(metadata);
+      alert('Lưu hoá đơn thành công. ID: ' + saved.id);
 
-      await window.FBClient.signInAnonymouslyIfNeeded?.();
-
-      // sanitized path prefix
-      const prefix = sanitizeFilename(orderName) || window.FBClient.invoiceFileName('invoice', '').replace(/\.$/, '');
-      const basePath = `invoices/${prefix}_${(new Date()).toISOString().replace(/[:.]/g,'-')}`;
-
-      // 1) upload metadata JSON
-      const jsonPath = `${basePath}/invoice.json`;
-      const jsonRes = await window.FBClient.uploadJSON(metadata, jsonPath);
-
-      // 2) upload QR image if present
-      const qrSrc = getQrImageSrc();
-      let qrUrl = null;
-      if(qrSrc){
-        const qrBlob = await fetchImageBlob(qrSrc);
-        if(qrBlob){
-          const qrFilename = `qr.png`;
-          const qrPath = `${basePath}/${qrFilename}`;
-          const qrRes = await window.FBClient.ensureAuthAndUpload(qrBlob, qrPath, pct => {
-            // optional: update small progress
-          });
-          qrUrl = qrRes?.url || null;
-        }
-      }
-
-      // 3) optionally capture full modal as PNG and upload (useful)
-      let captureUrl = null;
-      if (typeof html2canvas === 'function') {
-        try {
-          const modalNode = document.getElementById('modal');
-          if (modalNode) {
-            const pBlob = await window.FBClient.domNodeToPngBlob(modalNode, 2).catch(()=>null);
-            if (pBlob) {
-              const imgPath = `${basePath}/invoice_preview.png`;
-              const imgRes = await window.FBClient.ensureAuthAndUpload(pBlob, imgPath, pct => {/* progress */});
-              captureUrl = imgRes?.url || null;
-            }
-          }
-        } catch(e){ /* ignore capture errors */ }
-      }
-
-      // done — show success
-      const links = [];
-      if (jsonRes && jsonRes.url) links.push({label:'Invoice JSON', url: jsonRes.url});
-      if (qrUrl) links.push({label:'QR image', url: qrUrl});
-      if (captureUrl) links.push({label:'Preview', url: captureUrl});
-
-      let msg = 'Lưu hoá đơn thành công.\n';
-      links.forEach(l => { msg += `${l.label}: ${l.url}\n`; });
-
-      alert(msg);
-
-      // optional: restore button
-      if(saveBtn){
-        saveBtn.disabled = false;
-        saveBtn.textContent = oldTxt || 'Lưu hoá đơn';
-      }
-
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
     } catch (err) {
       console.error('saveInvoiceFlow error', err);
       alert('Lưu hoá đơn thất bại: ' + (err.message || err));
       const saveBtn = document.getElementById('saveInvoiceBtn');
-      if(saveBtn){
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Lưu hoá đơn';
-      }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Lưu hoá đơn'; }
     }
   }
+
 
   // attach handler (call during init)
   function attachSaveHandler(){
