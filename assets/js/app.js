@@ -707,6 +707,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // =====================================================
       // =============== UPDATE EXISTING INVOICE ==============
       // =====================================================
+      console.log(currentInvoiceId);
       if (currentInvoiceId) {
         const existing = await window.FBClient.getInvoice(currentInvoiceId);
 
@@ -773,7 +774,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // ===== RESET STATE =====
-      // currentInvoiceId = null;
+      currentInvoiceId = null;
 
       // refresh invoice list nếu đang mở
       try {
