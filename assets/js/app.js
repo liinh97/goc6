@@ -839,9 +839,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const noteInput = document.getElementById('invoice_note');
     if (noteInput) {
-      noteInput.value = data.note || '';
+      noteInput.value = invoice.note || '';
     }
-
 
     calculateAll();
   }
