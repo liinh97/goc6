@@ -21,6 +21,7 @@ FB.initFirebase(firebaseConfig);
 ========================= */
 let currentInvoiceId = null;
 let editingInvoiceData = null; // giữ raw data invoice (optional)
+let invoiceUIMode = 'create'; 
 
 // ===== GLOBAL FILTER STATE =====
 const invoiceFilters = {
@@ -966,6 +967,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* ===== CLICK ROW → VIEW ===== */
     el.addEventListener('click', () => {
+      invoiceUIMode = 'view';
       openInvoiceDetailFallback(id, 'view');
     });
 
@@ -973,12 +975,14 @@ document.addEventListener('DOMContentLoaded', function () {
     el.querySelector('.small-edit')?.addEventListener('click', async e => {
       e.stopPropagation(); // 🔥 bắt buộc
 
+      invoiceUIMode = 'edit';
       await loadInvoiceToItems(id);
       setUIMode('items');
     });
 
     el.querySelector('.small-note')?.addEventListener('click', e => {
       e.stopPropagation();
+      invoiceUIMode = 'edit';
       openInvoiceDetailFallback(id, 'note');
     });
 
@@ -999,6 +1003,44 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     listRoot.appendChild(el);
+  }
+
+  function applyInvoiceMode({ status }) {
+    const orderInput = document.getElementById('order_name');
+    const noteInput = document.getElementById('invoice_note');
+    const saveBtn = document.getElementById('saveInvoiceBtn');
+
+    // ===== VIEW =====
+    if (invoiceUIMode === 'view') {
+      orderInput.disabled = true;
+      noteInput.disabled = true;
+      saveBtn.style.display = 'none';
+      return;
+    }
+
+    // ===== EDIT =====
+    if (invoiceUIMode === 'edit') {
+      if (status === 1) {
+        // đơn mới → sửa tất
+        orderInput.disabled = false;
+        noteInput.disabled = false;
+        saveBtn.style.display = '';
+        saveBtn.textContent = 'Lưu hoá đơn';
+      } 
+      else if (status === 2) {
+        // đã thanh toán → chỉ sửa NOTE
+        orderInput.disabled = true;
+        noteInput.disabled = false;
+        saveBtn.style.display = '';
+        saveBtn.textContent = 'Lưu ghi chú';
+      } 
+      else {
+        // huỷ
+        orderInput.disabled = true;
+        noteInput.disabled = true;
+        saveBtn.style.display = 'none';
+      }
+    }
   }
 
   function renderInvoiceItems(rows) {
@@ -1217,6 +1259,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (mode !== 'note') {
       currentInvoiceId = null;
     }
+
+    const status = Number(data.status);
+    applyInvoiceMode({ status });
   }
 
   async function changeInvoiceStatus(id, newStatus) {
