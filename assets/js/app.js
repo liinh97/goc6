@@ -771,9 +771,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
+      console.log(rows)
+
       const now = new Date();
       const filtered = rows.filter(row => {
         const d = row.data || {};
+
+        console.log(d)
+        console.log(invoiceFilters)
 
         // status
         if (invoiceFilters.status !== 'all') {
