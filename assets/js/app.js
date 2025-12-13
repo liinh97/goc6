@@ -20,6 +20,7 @@ FB.initFirebase(firebaseConfig);
    GLOBAL STATE
 ========================= */
 let currentInvoiceId = null;
+let editingInvoiceData = null; // giữ raw data invoice (optional)
 
 // ===== GLOBAL FILTER STATE =====
 const invoiceFilters = {
@@ -775,6 +776,62 @@ document.addEventListener('DOMContentLoaded', function () {
     3: { text: 'Đã huỷ', class: 'st-cancel' },
   };
 
+  async function loadInvoiceToItems(invoiceId) {
+    if (!window.FBClient?.getInvoice) {
+      alert('Không lấy được hoá đơn');
+      return;
+    }
+
+    const res = await window.FBClient.getInvoice(invoiceId);
+    if (!res || !res.data) {
+      alert('Hoá đơn không tồn tại');
+      return;
+    }
+
+    const invoice = res.data;
+    currentInvoiceId = invoiceId;
+    editingInvoiceData = invoice;
+
+    // 1️⃣ reset toàn bộ items về 0
+    document.querySelectorAll('.item').forEach(item => {
+      const q = item.querySelector('.qty-input');
+      if (q) q.value = 0;
+      updateBadge(item);
+    });
+
+    // 2️⃣ map invoice items → UI items
+    (invoice.items || []).forEach(invItem => {
+      const itemEl = [...document.querySelectorAll('.item')]
+        .find(el => el.dataset.name === invItem.name);
+
+      if (!itemEl) return;
+
+      const q = itemEl.querySelector('.qty-input');
+      if (q) q.value = invItem.qty;
+
+      // nếu sau này có size / variant thì map thêm ở đây
+      updateBadge(itemEl);
+    });
+
+    // 3️⃣ fill meta (ship, discount, order name)
+    const shipEl = document.getElementById('ship_fee');
+    if (shipEl) {
+      shipEl.dataset.raw = invoice.ship || 0;
+      shipEl.value = formatVND(invoice.ship || 0);
+    }
+
+    const discountEl = document.getElementById('discount');
+    if (discountEl) {
+      discountEl.dataset.raw = invoice.discount || 0;
+      discountEl.value = formatVND(invoice.discount || 0);
+    }
+
+    const orderInput = document.getElementById('order_name');
+    if (orderInput) orderInput.value = invoice.orderName || '';
+
+    calculateAll();
+  }
+
   function renderInvoiceItem(row) {
     const listRoot = document.getElementById('invoiceList');
     if (!listRoot) return;
@@ -837,7 +894,9 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ===== EDIT ===== */
     el.querySelector('.small-edit')?.addEventListener('click', e => {
       e.stopPropagation(); // 🔥 bắt buộc
-      openInvoiceDetailFallback(id, 'edit');
+
+      await loadInvoiceToItems(id);   // 👈 mấu chốt
+      setUIMode('items');             // quay về màn hình bán hàng
     });
 
     /* ===== PAY ===== */
