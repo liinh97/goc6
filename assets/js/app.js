@@ -274,8 +274,11 @@ document.addEventListener('DOMContentLoaded', function () {
       applyFilter();
       showFavsBtn.addEventListener('click', ()=>{
 
+        console.log('test')
+
         if (document.body.classList.contains('mode-invoices')) {
           setUIMode('items');
+          console.log('invoices')
         }
 
         filterFavsOnly = !filterFavsOnly;
