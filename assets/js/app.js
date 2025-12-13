@@ -16,6 +16,26 @@ const firebaseConfig = {
 // Init (no-op nếu đã init)
 FB.initFirebase(firebaseConfig);
 
+/* =========================
+   UI MODE
+========================= */
+let UI_MODE = 'items'; // items | invoices
+
+function setUIMode(mode) {
+  if (!['items', 'invoices'].includes(mode)) return;
+  UI_MODE = mode;
+
+  document.body.classList.remove('mode-items', 'mode-invoices');
+  document.body.classList.add(`mode-${mode}`);
+
+  if (mode === 'invoices') {
+    renderInvoiceList();
+  }
+}
+
+/* =========================
+   GLOBAL STATE
+========================= */
 let currentInvoiceId = null;
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -208,9 +228,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  document.getElementById('showInvoicesBtn').onclick=()=>setUIMode('invoices');
+  document.getElementById('collapseBtn').onclick=()=>setUIMode('items');
+
   // ----- Init and handlers -----
   function init(){
     renderList();
+
+    setUIMode('items');
 
     // Hoá đơn button -> open modal
     const collapseBtn = document.getElementById('collapseBtn');
@@ -691,88 +716,117 @@ document.addEventListener('DOMContentLoaded', function () {
     const listRoot = document.getElementById('invoiceList');
     const emptyEl = document.getElementById('invoiceListEmpty');
     if (!listRoot) return;
+
     listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
-    emptyEl.style.display = 'none';
+    emptyEl.classList.add('hidden');
 
     if (!window.FBClient || typeof window.FBClient.listInvoices !== 'function') {
-      listRoot.innerHTML = '<div class="error">FBClient.listInvoices chưa có — kiểm tra firebase-client.js</div>';
+      listRoot.innerHTML =
+        '<div class="error">FBClient.listInvoices chưa có — kiểm tra firebase-client.js</div>';
       return;
     }
 
     try {
       // lấy 20 hoá đơn gần nhất
       const rows = await window.FBClient.listInvoices({ limit: 20 });
+
       listRoot.innerHTML = '';
+
       if (!rows || rows.length === 0) {
-        emptyEl.style.display = 'block';
+        emptyEl.classList.remove('hidden');
         return;
       }
 
       rows.forEach(row => {
         const id = row.id;
         const d = row.data || {};
+
         const name = d.orderName || '(Không tên)';
-        const time = d.createdAtDisplay || (d.createdAt ? new Date(d.createdAt).toLocaleString('vi-VN') : '');
-        const total = typeof d.total !== 'undefined' ? formatVND(d.total) + ' ₫' : '-';
+        const time =
+          d.createdAtDisplay ||
+          (d.createdAt ? new Date(d.createdAt).toLocaleString('vi-VN') : '');
+
+        const total =
+          typeof d.total !== 'undefined'
+            ? formatVND(d.total) + ' ₫'
+            : '-';
+
         const el = document.createElement('div');
-        el.className = 'item'; // tận dụng style item có sẵn — sẽ nhỏ gọn
-        el.style.padding = '8px';
-        el.style.margin = '6px 0';
-        el.style.display = 'flex';
-        el.style.justifyContent = 'space-between';
-        el.style.alignItems = 'center';
+        el.className = 'item';
+
         el.innerHTML = `
-          <div style="flex:1; min-width:0">
-            <div class="name" style="font-size:14px; font-weight:700; margin-bottom:4px">${escapeHtml(name)}</div>
-            <div class="muted" style="font-size:13px">${escapeHtml(time)}</div>
-          </div>
-          <div style="min-width:120px; text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-            <div style="font-weight:800">${total}</div>
-            <div style="display:flex; gap:6px">
-              <div style="display:flex; gap:6px">
-                <button class="btn small-view" data-id="${id}" style="padding:6px 8px">Xem</button>
-                ${ (d.status === 1) ? `<button class="btn small-edit" data-id="${id}" style="padding:6px 8px">Sửa</button>` : '' }
-                ${ (d.status === 1) ? `<button class="btn small-pay" data-id="${id}" style="padding:6px 8px">Thanh toán</button>` : '' }
-                ${ (d.status === 1) ? `<button class="btn small-cancel" data-id="${id}" style="padding:6px 8px">Huỷ</button>` : '' }
-              </div>
+          <div class="invoice-main">
+            <div class="name" title="${escapeHtml(name)}">
+              ${escapeHtml(name)}
+            </div>
+            <div class="muted">
+              ${escapeHtml(time)}
             </div>
           </div>
+
+          <div class="invoice-actions">
+            <div class="invoice-total">
+              ${total}
+            </div>
+
+            <button class="btn small-view" data-id="${id}">
+              Xem
+            </button>
+
+            ${
+              d.status === 1
+                ? `
+                  <button class="btn small-pay" data-id="${id}" title="Đã thanh toán">✓</button>
+                  <button class="btn small-cancel" data-id="${id}" title="Huỷ đơn">✕</button>
+                `
+                : ''
+            }
+          </div>
         `;
+
         listRoot.appendChild(el);
       });
 
-      // attach view handlers
+      /* ===== ATTACH HANDLERS ===== */
+
       // view
-      listRoot.querySelectorAll('.small-view').forEach(btn=>{
-        btn.addEventListener('click', ()=> openInvoiceDetailFallback(btn.dataset.id));
+      listRoot.querySelectorAll('.small-view').forEach(btn => {
+        btn.addEventListener('click', () =>
+          openInvoiceDetailFallback(btn.dataset.id)
+        );
       });
 
-      // edit -> open modal ready to edit (same as view but ensure editable)
-      listRoot.querySelectorAll('.small-edit').forEach(btn=>{
-        btn.addEventListener('click', ()=> {
+      // edit (nếu sau này dùng)
+      listRoot.querySelectorAll('.small-edit').forEach(btn => {
+        btn.addEventListener('click', () => {
           openInvoiceDetailFallback(btn.dataset.id);
-          // currentInvoiceId is set inside openInvoiceDetailFallback
         });
       });
 
       // pay
-      listRoot.querySelectorAll('.small-pay').forEach(btn=>{
-        btn.addEventListener('click', ()=> {
+      listRoot.querySelectorAll('.small-pay').forEach(btn => {
+        btn.addEventListener('click', () => {
           if (!confirm('Xác nhận đánh dấu "Đã thanh toán" cho đơn này?')) return;
           changeInvoiceStatus(btn.dataset.id, 2);
         });
       });
 
       // cancel
-      listRoot.querySelectorAll('.small-cancel').forEach(btn=>{
-        btn.addEventListener('click', ()=> {
+      listRoot.querySelectorAll('.small-cancel').forEach(btn => {
+        btn.addEventListener('click', () => {
           if (!confirm('Xác nhận huỷ đơn này?')) return;
           changeInvoiceStatus(btn.dataset.id, 3);
         });
       });
+
     } catch (err) {
       console.error('renderInvoiceList error', err);
-      listRoot.innerHTML = `<div class="error">Lấy danh sách hoá đơn thất bại: ${escapeHtml(err.message || String(err))}</div>`;
+      listRoot.innerHTML = `
+        <div class="error">
+          Lấy danh sách hoá đơn thất bại:
+          ${escapeHtml(err.message || String(err))}
+        </div>
+      `;
     }
   }
 

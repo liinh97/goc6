@@ -2,101 +2,156 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Danh sách sản phẩm</title>
 
-  <!-- Import CSS đúng chuẩn GitHub Pages -->
-  <link rel="stylesheet" href="./assets/css/styles.css?v=1">
+  <!-- CSS -->
+  <link rel="stylesheet" href="./assets/css/styles.css?v=3" />
 </head>
-<body>
+
+<body class="mode-items">
+
   <h1>Danh sách sản phẩm</h1>
 
-  <div class="top-controls" style="align-items:flex-start;">
-    <div style="display:flex; gap:8px; align-items:center;">
-      <button class="btn toggle" id="showFavsBtn" aria-pressed="false" title="Chỉ hiện mục yêu thích">Yêu thích</button>
-      <button class="btn" id="showInvoicesBtn" aria-pressed="false" title="Danh sách hoá đơn">Hoá đơn</button>
-    </div>
-    <!-- panel hiện danh sách hoá đơn (ẩn mặc định) -->
-    <div id="invoiceListPanel" style="margin-left:16px; display:none; width:420px; max-width:60vw;">
-      <div style="background:#fff;border-radius:10px;padding:8px;border:1px solid #e6e9ef; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <strong>Danh sách hoá đơn</strong>
-          <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px">Tải lại</button>
-        </div>
-        <div id="invoiceList" style="max-height:320px; overflow:auto;"></div>
-        <div id="invoiceListEmpty" class="muted" style="display:none;padding-top:8px">Chưa có hoá đơn nào.</div>
+  <!-- ===== TOP CONTROLS ===== -->
+  <div class="top-controls">
+    <button class="btn toggle" id="showFavsBtn" aria-pressed="false">
+      Yêu thích
+    </button>
+
+    <button class="btn" id="showInvoicesBtn">
+      Hoá đơn
+    </button>
+  </div>
+
+  <!-- ===== INVOICE LIST PANEL (ONLY IN INVOICE MODE) ===== -->
+  <div id="invoiceListPanel" style="width:420px; max-width:100%;">
+    <div style="
+      background:#fff;
+      border-radius:10px;
+      padding:10px;
+      border:1px solid #e6e9ef;
+      box-shadow:0 8px 20px rgba(12,24,40,0.04);
+    ">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong>Danh sách hoá đơn</strong>
+        <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px;">
+          Tải lại
+        </button>
+      </div>
+
+      <div id="invoiceList" style="max-height:360px; overflow:auto;">
+        <!-- renderInvoiceList() -->
+      </div>
+
+      <div id="invoiceListEmpty" class="muted hidden" style="padding-top:8px;">
+        Chưa có hoá đơn nào.
       </div>
     </div>
   </div>
-  
-  <div class="list" id="product-list" aria-live="polite"></div>
 
-  <div class="bottom-controls" id="bottomControls">
+  <!-- ===== PRODUCT LIST ===== -->
+  <div class="list" id="product-list" aria-live="polite">
+    <!-- render products -->
+  </div>
+
+  <!-- ===== BOTTOM CONTROLS ===== -->
+  <div class="bottom-controls">
     <div class="control">
-      <label class="muted">Phí ship
-        <input type="text" id="ship_fee" data-raw="0" value="0" inputmode="numeric" pattern="[0-9]*" />
+      <label class="muted">
+        Phí ship
+        <input id="ship_fee" type="text" value="0" data-raw="0" inputmode="numeric" />
       </label>
     </div>
+
     <div class="control">
-      <label class="muted">Giảm giá
-        <input type="text" id="discount" data-raw="0" value="0" inputmode="numeric" pattern="[0-9]*" />
+      <label class="muted">
+        Giảm giá
+        <input id="discount" type="text" value="0" data-raw="0" inputmode="numeric" />
       </label>
     </div>
 
-    <div style="margin-left:auto" class="actions">
-      <button class="btn" id="resetBtn" title="Reset số lượng">Reset</button>
+    <div class="actions" style="margin-left:auto;">
+      <button class="btn" id="resetBtn">Reset</button>
       <button class="btn" id="collapseBtn">Hoá đơn</button>
     </div>
   </div>
 
-  <div class="summary" aria-live="polite">
-    <div class="muted">Món đã chọn: <span id="selectedCount">0</span> · Yêu thích: <span id="favCount">0</span></div>
-    <div class="total">Tổng: <span id="grandTotal">0</span> ₫</div>
-  </div>
-
-  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
-    <div class="modal" role="document" id="modal">
-      <h2>Hoá đơn</h2>
-      <div id="compactList" class="compact" aria-live="polite"></div>
-      
-      <div class="footer">
-        <div class="meta-lines">
-          <div class="meta-line">Phí ship: <span id="modal_ship">0đ</span></div>
-          <div class="meta-line">Giảm giá: <span id="modal_discount">0đ</span></div>
-        </div>
-        <div class="total-line" style="font-weight:800">Tổng: <span id="modal_total">0đ</span></div>
-      </div>
-
-      <div class="payment-row" id="paymentRow">
-        <div role="radiogroup" aria-label="Phương thức thanh toán" class="small-muted">
-          <label><input type="radio" name="payment_method" value="cash" checked /> Tiền mặt</label>
-          <label style="margin-left:10px"><input type="radio" name="payment_method" value="qr"/> QR</label>
-        </div>
-
-        <div id="cashContainer" class="cash-box" aria-hidden="false" style="margin-left:8px">
-          <label class="small-muted">Tiền khách đưa:
-            <input id="cash_given" type="text" data-raw="0" value="0" inputmode="numeric" pattern="[0-9]*" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:120px; margin-left:6px" />
-          </label>
-          <div class="small-muted">Trả lại: <strong id="change_due">0đ</strong></div>
-        </div>
-      </div>
-
-      <div id="qrContainer" class="qr-box hidden" aria-hidden="true" title="Quét mã để thanh toán"></div>
-      <div id="qrError" class="error hidden" role="alert"></div>
-
-      <!-- Thêm input tên đơn hàng và nút lưu hoá đơn -->
-      <div style="display:flex; gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap">
-        <label class="small-muted">Tên đơn:
-          <input id="order_name" type="text" placeholder="Mặc định: H:i d-m-y" style="padding:6px;border-radius:6px;border:1px solid #ddd; min-width:180px; margin-left:6px" />
-        </label>
-
-        <button class="btn" id="saveInvoiceBtn" title="Lưu hoá đơn">Lưu hoá đơn</button>
-        <button class="btn" id="closeModal">Đóng</button>
-      </div>
+  <!-- ===== SUMMARY ===== -->
+  <div class="summary">
+    <div class="muted">
+      Món đã chọn: <span id="selectedCount">0</span>
+      · Yêu thích: <span id="favCount">0</span>
+    </div>
+    <div class="total">
+      Tổng: <span id="grandTotal">0</span> ₫
     </div>
   </div>
 
-  <!-- Import JS đúng chuẩn GitHub Pages -->
-  <script type="module" src="./assets/js/app.js?v=2" defer></script>
+  <!-- ===== MODAL INVOICE ===== -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="document">
+
+      <h2>Hoá đơn</h2>
+
+      <div id="compactList" class="compact"></div>
+
+      <div class="footer">
+        <div class="meta-lines">
+          <div>Phí ship: <span id="modal_ship">0đ</span></div>
+          <div>Giảm giá: <span id="modal_discount">0đ</span></div>
+        </div>
+        <div class="total-line">
+          Tổng: <span id="modal_total">0đ</span>
+        </div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="payment-row">
+        <div class="small-muted">
+          <label>
+            <input type="radio" name="payment_method" value="cash" checked />
+            Tiền mặt
+          </label>
+          <label style="margin-left:10px;">
+            <input type="radio" name="payment_method" value="qr" />
+            QR
+          </label>
+        </div>
+
+        <div class="cash-box" id="cashContainer">
+          <label class="small-muted">
+            Tiền khách đưa:
+            <input id="cash_given" type="text" value="0" data-raw="0" inputmode="numeric"
+                   style="padding:6px; border-radius:6px; border:1px solid #ddd; min-width:120px;" />
+          </label>
+          <div class="small-muted">
+            Trả lại: <strong id="change_due">0đ</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR -->
+      <div id="qrContainer" class="qr-box hidden"></div>
+      <div id="qrError" class="error hidden"></div>
+
+      <!-- ACTIONS -->
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <label class="small-muted">
+          Tên đơn:
+          <input id="order_name" type="text" placeholder="Mặc định: H:i d-m-y"
+                 style="padding:6px; border-radius:6px; border:1px solid #ddd; min-width:180px;" />
+        </label>
+
+        <button class="btn" id="saveInvoiceBtn">Lưu hoá đơn</button>
+        <button class="btn" id="closeModal">Đóng</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== JS ===== -->
+  <script type="module" src="./assets/js/app.js?v=3"></script>
+
 </body>
 </html>
