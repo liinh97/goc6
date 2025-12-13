@@ -778,6 +778,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // refresh invoice list nếu đang mở
       try {
+        resetInvoicePaging();
         await renderInvoiceList();
       } catch (_) {}
 
