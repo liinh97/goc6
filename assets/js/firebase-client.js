@@ -110,8 +110,8 @@ export async function listInvoicesByQuery({
   if (date) {
     const { start, end } = getDayRange(date);
     constraints.push(
-      where('createdAt', '>=', start),
-      where('createdAt', '<', end)
+      where('createdAtServer', '>=', start),
+      where('createdAtServer', '<', end)
     );
   }
 
@@ -119,7 +119,7 @@ export async function listInvoicesByQuery({
     constraints.push(where('status', '==', Number(status)));
   }
 
-  constraints.push(orderBy('createdAt', 'desc'));
+  constraints.push(orderBy('createdAtServer', 'desc'));
 
   if (cursor) {
     constraints.push(startAfter(cursor));
