@@ -785,8 +785,12 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
           </div>
 
+          <span class="muted">${escapeHtml(time)}</span>
+          
           <div class="invoice-footer">
-            <span class="muted">${escapeHtml(time)}</span>
+            <span class="invoice-status ${statusInfo.class}">
+              ${statusInfo.text}
+            </span>
             <div class="invoice-actions">
               <button class="btn small-view" data-id="${id}">Xem</button>
               ${
@@ -799,10 +803,6 @@ document.addEventListener('DOMContentLoaded', function () {
               }
             </div>
           </div>
-
-          <span class="invoice-status ${statusInfo.class}">
-            ${statusInfo.text}
-          </span>
         `;
 
         listRoot.appendChild(el);

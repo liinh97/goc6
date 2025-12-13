@@ -387,6 +387,7 @@ body.mode-invoices #invoiceList .item{
 
 .invoice-footer .muted {
   font-size: 12px;
+  margin-right: auto;
 }
 
 .invoice-actions {
@@ -438,7 +439,6 @@ body.mode-invoices #invoiceList .item{
 }
 
 .invoice-status {
-  margin-right: auto;
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 12px;
