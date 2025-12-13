@@ -702,6 +702,8 @@ document.addEventListener('DOMContentLoaded', function () {
         alert('Lưu hoá đơn thành công. ID: ' + saved.id);
       }
 
+      currentInvoiceId = null;
+
       // refresh invoice list (if panel open)
       try { await renderInvoiceList(); } catch(_) {}
 
@@ -927,6 +929,8 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error('openInvoiceDetailFallback', err);
       alert('Lỗi khi tải chi tiết: ' + (err.message || err));
     }
+
+    currentInvoiceId = null;
   }
 
   async function changeInvoiceStatus(id, newStatus) {
