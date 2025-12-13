@@ -665,78 +665,131 @@ document.addEventListener('DOMContentLoaded', function () {
   // main save flow (chỉnh: không lưu ảnh QR, không capture)
   async function saveInvoiceFlow() {
     try {
+      const saveBtn = document.getElementById('saveInvoiceBtn');
+      const oldTxt = saveBtn?.textContent;
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Đang lưu...';
+      }
+
+      // ===== COLLECT DATA =====
       const items = collectInvoiceItems();
       const shipEl = document.getElementById('ship_fee');
       const discountEl = document.getElementById('discount');
+
       const ship = shipEl ? parseRaw(shipEl.dataset.raw || shipEl.value) : 0;
       const discount = discountEl ? parseRaw(discountEl.dataset.raw || discountEl.value) : 0;
+
       const totalText = document.getElementById('modal_total')?.textContent || '0';
       const total = parseRaw(totalText);
+
       const note = document.getElementById('invoice_note')?.value?.trim() || '';
 
       const orderInput = document.getElementById('order_name');
       const now = new Date();
-      const defaultName = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-      const orderName = (orderInput && orderInput.value.trim()) ? orderInput.value.trim() : defaultName;
-      const createdAt = now.toLocaleTimeString('en-GB', {hour12:false}) + ' ' + now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-      const status = 1;
 
-      if (items.length === 0) { alert('Chưa có món nào để lưu.'); return; }
+      const defaultName =
+        now.toLocaleTimeString('en-GB', { hour12: false }) +
+        ' ' +
+        now.toLocaleDateString('vi-VN').replace(/\//g, '-');
 
-      const metadata = { orderName, createdAt, items, ship, discount, total, status, note };
+      const orderName =
+        orderInput && orderInput.value.trim()
+          ? orderInput.value.trim()
+          : defaultName;
 
-      const saveBtn = document.getElementById('saveInvoiceBtn');
-      const oldTxt = saveBtn ? saveBtn.textContent : null;
-      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...'; }
+      if (!currentInvoiceId && items.length === 0) {
+        alert('Chưa có món nào để lưu.');
+        return;
+      }
 
-      // ensure auth
-      if (window.FBClient && typeof window.FBClient.signInAnonymouslyIfNeeded === 'function') {
+      // ===== ENSURE AUTH =====
+      if (window.FBClient?.signInAnonymouslyIfNeeded) {
         await window.FBClient.signInAnonymouslyIfNeeded();
       }
 
+      // =====================================================
+      // =============== UPDATE EXISTING INVOICE ==============
+      // =====================================================
       if (currentInvoiceId) {
-        // editing existing invoice -> ensure status == 1 first
         const existing = await window.FBClient.getInvoice(currentInvoiceId);
+
         if (!existing || !existing.data) {
           alert('Hoá đơn không tồn tại hoặc đã bị xoá.');
-          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
-          return;
-        }
-        const st = Number(existing.data.status || 1);
-        if (st !== 1) {
-          alert('Không thể sửa hoá đơn vì trạng thái không phải "Đơn mới".');
-          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
           return;
         }
 
+        const st = Number(existing.data.status);
+
         if (st === 1) {
-          await window.FBClient.updateInvoice(currentInvoiceId, metadata);
+          // ✅ ĐƠN MỚI → update toàn bộ
+          await window.FBClient.updateInvoice(currentInvoiceId, {
+            orderName,
+            items,
+            ship,
+            discount,
+            total,
+            note,
+          });
+
         } else if (st === 2) {
+          // ✅ ĐÃ THANH TOÁN → CHỈ update NOTE
           await window.FBClient.updateInvoice(currentInvoiceId, {
             note,
           });
+
+        } else {
+          alert('Hoá đơn đã huỷ, không thể sửa.');
+          return;
         }
 
         alert('Cập nhật hoá đơn thành công.');
-      } else {
-        // create new: set status = 1
-        metadata.status = 1;
-        const saved = await window.FBClient.saveInvoice(metadata);
+
+      } 
+      // =====================================================
+      // ================= CREATE NEW INVOICE =================
+      // =====================================================
+      else {
+        const createdAt =
+          now.toLocaleTimeString('en-GB', { hour12: false }) +
+          ' ' +
+          now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+
+        const payload = {
+          orderName,
+          createdAt,
+          items,
+          ship,
+          discount,
+          total,
+          note,
+          status: 1, // chỉ set status khi tạo mới
+        };
+
+        const saved = await window.FBClient.saveInvoice(payload);
         currentInvoiceId = saved.id;
-        alert('Lưu hoá đơn thành công. ID: ' + saved.id);
+
+        alert('Lưu hoá đơn thành công.');
       }
 
+      // ===== RESET STATE =====
       currentInvoiceId = null;
 
-      // refresh invoice list (if panel open)
-      try { await renderInvoiceList(); } catch(_) {}
+      // refresh invoice list nếu đang mở
+      try {
+        await renderInvoiceList();
+      } catch (_) {}
 
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
     } catch (err) {
       console.error('saveInvoiceFlow error', err);
       alert('Lưu hoá đơn thất bại: ' + (err.message || err));
+    } finally {
       const saveBtn = document.getElementById('saveInvoiceBtn');
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Lưu hoá đơn'; }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Lưu hoá đơn';
+      }
     }
   }
 
@@ -896,6 +949,13 @@ document.addEventListener('DOMContentLoaded', function () {
               ? `<button class="btn small-edit">Sửa</button>`
               : ''
           }
+
+          ${
+            d.status === 2
+              ? `<button class="btn small-note">Ghi chú</button>`
+              : ''
+          }
+
           ${
             d.status === 1
               ? `
@@ -919,8 +979,13 @@ document.addEventListener('DOMContentLoaded', function () {
     el.querySelector('.small-edit')?.addEventListener('click', async e => {
       e.stopPropagation(); // 🔥 bắt buộc
 
-      await loadInvoiceToItems(id);   // 👈 mấu chốt
-      setUIMode('items');             // quay về màn hình bán hàng
+      await loadInvoiceToItems(id);
+      setUIMode('items');
+    });
+
+    el.querySelector('.small-note')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openInvoiceDetailFallback(id, 'note');
     });
 
     /* ===== PAY ===== */
@@ -1106,21 +1171,32 @@ document.addEventListener('DOMContentLoaded', function () {
       const saveBtn = document.getElementById('saveInvoiceBtn');
 
       const editable = mode === 'edit' && status === 1;
+      const editableNote = mode === 'edit' || mode === 'note';
 
       if (orderInput) {
         orderInput.disabled = !editable;
       }
 
+      if (noteInput) noteInput.disabled = !editableNote;
+
       if (saveBtn) {
-        if (editable) {
+        if (mode === 'edit') {
+          // Đơn mới → sửa toàn bộ
           saveBtn.style.display = '';
           saveBtn.disabled = false;
           saveBtn.textContent = 'Lưu hoá đơn';
+
+        } else if (mode === 'note') {
+          // Đã thanh toán → chỉ sửa note
+          saveBtn.style.display = '';
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Lưu ghi chú';
+
         } else {
-          saveBtn.style.display = 'none'; // ⬅️ CHỐT: view thì ẩn luôn
+          // View thuần
+          saveBtn.style.display = 'none';
         }
       }
-
 
       // render fresh QR by calling existing function
       if (grand > 0) {
