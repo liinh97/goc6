@@ -184,13 +184,18 @@ document.addEventListener('DOMContentLoaded', function () {
       // favorite toggle
       if (favBtn) {
         favBtn.addEventListener('click', ()=>{ 
-          const pressed = favBtn.getAttribute('aria-pressed') === 'true';
-          if(pressed){ favorites.delete(name); favBtn.setAttribute('aria-pressed','false'); }
-          else { favorites.add(name); favBtn.setAttribute('aria-pressed','true'); }
-          updateFavCount(); applyFilter();
+          // 1. nếu đang ở hoá đơn → quay về items NGAY
           if (document.body.classList.contains('mode-invoices')) {
             setUIMode('items');
           }
+
+          // 2. toggle filter
+          filterFavsOnly = !filterFavsOnly;
+          showFavsBtn.classList.toggle('active', filterFavsOnly);
+          showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
+
+          // 3. áp filter
+          applyFilter();
         });
       }
 
