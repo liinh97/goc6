@@ -189,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('mode-invoices')
             setUIMode('items');
           }
+          console.log('tét')
 
           // 2. toggle filter
           filterFavsOnly = !filterFavsOnly;
