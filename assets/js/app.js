@@ -736,13 +736,106 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // --- Invoice list UI + logic ---
-  // Ghi chú: dùng window.FBClient.listInvoices() và window.FBClient.getInvoice() (đã expose trong firebase-client.js)
+  const invoiceFilters = {
+    status: 'all',   // all | 1 | 2 | 3
+    date: null,      // yyyy-mm-dd
+    limit: 10,
+    page: 1,
+  };
+
   const INVOICE_STATUS_MAP = {
     1: { text: 'Đơn mới', class: 'st-new' },
     2: { text: 'Đã thanh toán', class: 'st-paid' },
     3: { text: 'Đã huỷ', class: 'st-cancel' },
   };
+
+  function renderInvoiceItem(row) {
+    const d = row.data || {};
+    const id = row.id;
+
+    const name = d.orderName || '(Không tên)';
+    const createdAt = d.createdAt ? new Date(d.createdAt) : null;
+    const time = createdAt ? createdAt.toLocaleDateString('vi-VN') : '';
+
+    const total =
+      typeof d.total !== 'undefined'
+        ? formatVND(d.total) + ' ₫'
+        : '-';
+
+    const statusInfo =
+      INVOICE_STATUS_MAP[d.status] || {
+        text: 'Không rõ',
+        class: 'st-unknown',
+      };
+
+    const el = document.createElement('div');
+    el.className = 'item invoice-item';
+
+    el.innerHTML = `
+      <div class="invoice-header">
+        <div class="name">${escapeHtml(name)}</div>
+        <div class="price-badge">${total}</div>
+      </div>
+
+      <div class="invoice-footer">
+        <div class="invoice-meta">
+          <span class="muted">${escapeHtml(time)}</span>
+          <span class="invoice-status ${statusInfo.class}">
+            ${statusInfo.text}
+          </span>
+        </div>
+
+        <div class="invoice-actions">
+          <button class="btn small-view" data-id="${id}">Xem</button>
+          ${
+            d.status === 1
+              ? `
+                <button class="btn small-pay" data-id="${id}">✓</button>
+                <button class="btn small-cancel" data-id="${id}">✕</button>
+              `
+              : ''
+          }
+        </div>
+      </div>
+    `;
+
+    /* events */
+    el.querySelector('.small-view')?.addEventListener('click', () =>
+      openInvoiceDetailFallback(id, 'view')
+    );
+
+    el.querySelector('.small-pay')?.addEventListener('click', () => {
+      if (confirm('Xác nhận đã thanh toán?')) {
+        changeInvoiceStatus(id, 2);
+      }
+    });
+
+    el.querySelector('.small-cancel')?.addEventListener('click', () => {
+      if (confirm('Xác nhận huỷ đơn?')) {
+        changeInvoiceStatus(id, 3);
+      }
+    });
+
+    return el;
+  }
+
+  function renderInvoiceItems(rows) {
+    const listRoot = document.getElementById('invoiceList');
+    const emptyEl = document.getElementById('invoiceListEmpty');
+
+    listRoot.innerHTML = '';
+
+    if (!rows.length) {
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    emptyEl.classList.add('hidden');
+
+    rows.forEach(row => {
+      listRoot.appendChild(renderInvoiceItem(row));
+    });
+  }
 
   async function renderInvoiceList() {
     const listRoot = document.getElementById('invoiceList');
@@ -752,40 +845,27 @@ document.addEventListener('DOMContentLoaded', function () {
     listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
     emptyEl.classList.add('hidden');
 
-    if (!window.FBClient || typeof window.FBClient.listInvoices !== 'function') {
+    if (!window.FBClient?.listInvoices) {
       listRoot.innerHTML =
-        '<div class="error">FBClient.listInvoices chưa có — kiểm tra firebase-client.js</div>';
+        '<div class="error">FBClient.listInvoices chưa có</div>';
       return;
     }
 
     try {
-      // lấy 10 hoá đơn gần nhất
       const rows = await window.FBClient.listInvoices({
-        limit: invoiceFilters.limit,
+        limit: 100,
       });
 
-      listRoot.innerHTML = '';
-
-      if (!rows || rows.length === 0) {
-        emptyEl.classList.remove('hidden');
-        return;
-      }
-
-      console.log(rows)
-
-      const now = new Date();
+      /* ===== FILTER ===== */
       const filtered = rows.filter(row => {
         const d = row.data || {};
-
-        console.log(d)
-        console.log(invoiceFilters)
 
         // status
         if (invoiceFilters.status !== 'all') {
           if (String(d.status) !== String(invoiceFilters.status)) return false;
         }
 
-        // date (chỉ lọc theo NGÀY)
+        // date (lọc theo NGÀY)
         if (invoiceFilters.date && d.createdAt) {
           const created = new Date(d.createdAt);
           const picked = new Date(invoiceFilters.date);
@@ -801,24 +881,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
       /* ===== PAGINATION ===== */
       const totalItems = filtered.length;
-      const totalPages = Math.max(1, Math.ceil(totalItems / invoiceFilters.limit));
+      const totalPages = Math.max(
+        1,
+        Math.ceil(totalItems / invoiceFilters.limit)
+      );
+
       if (invoiceFilters.page > totalPages) {
         invoiceFilters.page = totalPages;
       }
 
       const start = (invoiceFilters.page - 1) * invoiceFilters.limit;
-      const pageItems = filtered.slice(start, start + invoiceFilters.limit);
+      const pageItems = filtered.slice(
+        start,
+        start + invoiceFilters.limit
+      );
 
-      listRoot.innerHTML = '';
+      renderInvoiceItems(pageItems);
 
-      if (pageItems.length === 0) {
-        emptyEl.classList.remove('hidden');
-        return;
-      }
-
-      pageItems.forEach(renderInvoiceItem); // giữ logic render của bạn
-
-      /* ===== UPDATE PAGINATION UI ===== */
+      /* ===== PAGINATION UI ===== */
       document.getElementById('pageInfo').textContent =
         `Trang ${invoiceFilters.page} / ${totalPages}`;
 
@@ -827,87 +907,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       document.getElementById('nextPageBtn').disabled =
         invoiceFilters.page >= totalPages;
-
-      filteredRows.forEach(row => {
-        const id = row.id;
-        const d = row.data || {};
-
-        const name = d.orderName || '(Không tên)';
-        const time =
-          d.createdAt ||
-          '';
-
-        const total =
-          typeof d.total !== 'undefined'
-            ? formatVND(d.total) + ' ₫'
-            : '-';
-
-        const el = document.createElement('div');
-        const statusInfo = INVOICE_STATUS_MAP[d.status] || { text: 'Không rõ', class: 'st-unknown' };
-        el.className = 'item invoice-item';
-
-        el.innerHTML = `
-          <div class="invoice-header">
-            <div class="name">${escapeHtml(name)}</div>
-            <div class="price-badge">
-              ${total}
-            </div>
-          </div>
-
-          <span class="muted">${escapeHtml(time)}</span>
-
-          <div class="invoice-footer">
-            <span class="invoice-status ${statusInfo.class}">
-              ${statusInfo.text}
-            </span>
-            <div class="invoice-actions">
-              <button class="btn small-view" data-id="${id}">Xem</button>
-              ${
-                d.status === 1
-                  ? `
-                    <button class="btn small-pay" data-id="${id}">✓</button>
-                    <button class="btn small-cancel" data-id="${id}">✕</button>
-                  `
-                  : ''
-              }
-            </div>
-          </div>
-        `;
-
-        listRoot.appendChild(el);
-      });
-
-      /* ===== ATTACH HANDLERS ===== */
-
-      // view
-      listRoot.querySelectorAll('.small-view').forEach(btn => {
-        btn.addEventListener('click', () =>
-          openInvoiceDetailFallback(btn.dataset.id, 'view')
-        );
-      });
-
-      // edit (nếu sau này dùng)
-      listRoot.querySelectorAll('.small-edit').forEach(btn => {
-        btn.addEventListener('click', () => {
-          openInvoiceDetailFallback(btn.dataset.id, 'edit');
-        });
-      });
-
-      // pay
-      listRoot.querySelectorAll('.small-pay').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm('Xác nhận đánh dấu "Đã thanh toán" cho đơn này?')) return;
-          changeInvoiceStatus(btn.dataset.id, 2);
-        });
-      });
-
-      // cancel
-      listRoot.querySelectorAll('.small-cancel').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (!confirm('Xác nhận huỷ đơn này?')) return;
-          changeInvoiceStatus(btn.dataset.id, 3);
-        });
-      });
 
     } catch (err) {
       console.error('renderInvoiceList error', err);
@@ -919,6 +918,18 @@ document.addEventListener('DOMContentLoaded', function () {
       `;
     }
   }
+
+  document.getElementById('prevPageBtn')?.addEventListener('click', () => {
+    if (invoiceFilters.page > 1) {
+      invoiceFilters.page--;
+      renderInvoiceList();
+    }
+  });
+
+  document.getElementById('nextPageBtn')?.addEventListener('click', () => {
+    invoiceFilters.page++;
+    renderInvoiceList();
+  });
 
   function attachInvoiceTabHandlers(){
     const showInvoicesBtn = document.getElementById('showInvoicesBtn');
