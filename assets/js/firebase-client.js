@@ -22,7 +22,8 @@ import {
   getDocs,
   serverTimestamp,
   where,
-  Timestamp
+  Timestamp,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 let app = null;
@@ -116,6 +117,7 @@ export async function listInvoicesByQuery({
 
   if (date) {
     const { start, end } = getDayRange(date);
+    console.log(start, end, date)
     q = query(
       q,
       where('createdAt', '>=', start),
