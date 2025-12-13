@@ -892,7 +892,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /* ===== EDIT ===== */
-    el.querySelector('.small-edit')?.addEventListener('click', e => {
+    el.querySelector('.small-edit')?.addEventListener('click', async e => {
       e.stopPropagation(); // 🔥 bắt buộc
 
       await loadInvoiceToItems(id);   // 👈 mấu chốt
