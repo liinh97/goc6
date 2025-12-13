@@ -707,7 +707,6 @@ document.addEventListener('DOMContentLoaded', function () {
       // =====================================================
       // =============== UPDATE EXISTING INVOICE ==============
       // =====================================================
-      console.log(currentInvoiceId);
       if (currentInvoiceId) {
         const existing = await window.FBClient.getInvoice(currentInvoiceId);
 
@@ -1213,7 +1212,9 @@ document.addEventListener('DOMContentLoaded', function () {
       alert('Lỗi khi tải chi tiết: ' + (err.message || err));
     }
 
-    currentInvoiceId = null;
+    if (mode !== 'note') {
+      currentInvoiceId = null;
+    }
   }
 
   async function changeInvoiceStatus(id, newStatus) {
