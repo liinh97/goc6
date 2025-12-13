@@ -503,7 +503,6 @@ body.mode-invoices #invoiceList .item{
   }
 
   .invoice-actions {
-    width: 100%;
     justify-content: flex-end;
   }
 }
