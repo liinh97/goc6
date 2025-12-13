@@ -1103,7 +1103,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // disable editing if status != 1
-      const status = Number(data.status || 1);
       const saveBtn = document.getElementById('saveInvoiceBtn');
 
       const editable = mode === 'edit' && status === 1;
