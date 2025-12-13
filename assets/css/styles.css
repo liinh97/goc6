@@ -316,6 +316,41 @@ body.mode-invoices #invoiceList .item{
   min-width: 0;
 }
 
+.invoice-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.invoice-status {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* trạng thái */
+.invoice-status.st-new {
+  background: #eef6ff;
+  color: #0b84ff;
+}
+
+.invoice-status.st-paid {
+  background: #e8f7ee;
+  color: #1e9b50;
+}
+
+.invoice-status.st-cancel {
+  background: #fdecec;
+  color: #c62828;
+}
+
+.invoice-status.st-unknown {
+  background: #eee;
+  color: #555;
+}
+
 .invoice-main .name {
   font-size: 14px;
   font-weight: 700;

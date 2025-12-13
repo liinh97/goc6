@@ -728,6 +728,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --- Invoice list UI + logic ---
   // Ghi chú: dùng window.FBClient.listInvoices() và window.FBClient.getInvoice() (đã expose trong firebase-client.js)
+  const INVOICE_STATUS_MAP = {
+    1: { text: 'Đơn mới', class: 'st-new' },
+    2: { text: 'Đã thanh toán', class: 'st-paid' },
+    3: { text: 'Đã huỷ', class: 'st-cancel' },
+  };
+
   async function renderInvoiceList() {
     const listRoot = document.getElementById('invoiceList');
     const emptyEl = document.getElementById('invoiceListEmpty');
@@ -768,6 +774,7 @@ document.addEventListener('DOMContentLoaded', function () {
             : '-';
 
         const el = document.createElement('div');
+        const statusInfo = INVOICE_STATUS_MAP[d.status] || { text: 'Không rõ', class: 'st-unknown' };
         el.className = 'item';
 
         el.innerHTML = `
@@ -775,8 +782,11 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="name" title="${escapeHtml(name)}">
               ${escapeHtml(name)}
             </div>
-            <div class="muted">
-              ${escapeHtml(time)}
+            <div class="invoice-meta">
+              <span class="muted">${escapeHtml(time)}</span>
+              <span class="invoice-status ${statusInfo.class}">
+                ${statusInfo.text}
+              </span>
             </div>
           </div>
 
@@ -792,8 +802,8 @@ document.addEventListener('DOMContentLoaded', function () {
             ${
               d.status === 1
                 ? `
-                  <button class="btn small-pay" data-id="${id}" title="Đã thanh toán">✓</button>
-                  <button class="btn small-cancel" data-id="${id}" title="Huỷ đơn">✕</button>
+                  <button class="btn small-pay" data-id="${id}">Đã thanh toán</button>
+                  <button class="btn small-cancel" data-id="${id}">Huỷ đơn</button>
                 `
                 : ''
             }
