@@ -742,6 +742,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const emptyEl = document.getElementById('invoiceListEmpty');
     if (!listRoot) return;
 
+    const invoiceFilters = {
+      time: 'today',
+      status: 'all',
+      limit: 20,
+      date: null, // yyyy-mm-dd
+    };
+
     listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
     emptyEl.classList.add('hidden');
 
@@ -753,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     try {
       // lấy 20 hoá đơn gần nhất
-      const rows = await window.FBClient.listInvoices({ limit: 10 });
+      const rows = await window.FBClient.listInvoices({ limit: invoiceFilters.limit });
 
       listRoot.innerHTML = '';
 
@@ -762,7 +769,42 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      rows.forEach(row => {
+      const now = new Date();
+
+      const filteredRows = rows.filter(row => {
+        const d = row.data || {};
+
+        /* ===== status ===== */
+        if (invoiceFilters.status !== 'all') {
+          if (String(d.status) !== String(invoiceFilters.status)) return false;
+        }
+
+        if (!d.createdAt) return true;
+
+        const created = new Date(d.createdAt);
+
+        /* ===== ƯU TIÊN: CHỌN NGÀY CỤ THỂ ===== */
+        if (invoiceFilters.date) {
+          const picked = new Date(invoiceFilters.date);
+          return (
+            created.getFullYear() === picked.getFullYear() &&
+            created.getMonth() === picked.getMonth() &&
+            created.getDate() === picked.getDate()
+          );
+        }
+
+        /* ===== FALLBACK: SELECT TIME ===== */
+        const diffDays = (now - created) / 86400000;
+
+        if (invoiceFilters.time === 'today') return diffDays < 1;
+        if (invoiceFilters.time === 'yesterday') return diffDays >= 1 && diffDays < 2;
+        if (invoiceFilters.time === '7days') return diffDays <= 7;
+        if (invoiceFilters.time === '30days') return diffDays <= 30;
+
+        return true;
+      });
+
+      filteredRows.forEach(row => {
         const id = row.id;
         const d = row.data || {};
 
@@ -974,6 +1016,46 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   attachInvoiceTabHandlers();
+
+  function attachInvoiceFilterHandlers() {
+    const timeEl = document.getElementById('filterTime');
+    const statusEl = document.getElementById('filterStatus');
+    const limitEl = document.getElementById('filterLimit');
+
+    if (timeEl) {
+      timeEl.value = invoiceFilters.time;
+      timeEl.addEventListener('change', async () => {
+        invoiceFilters.time = timeEl.value;
+        await renderInvoiceList();
+      });
+    }
+
+    if (statusEl) {
+      statusEl.value = invoiceFilters.status;
+      statusEl.addEventListener('change', async () => {
+        invoiceFilters.status = statusEl.value;
+        await renderInvoiceList();
+      });
+    }
+
+    if (limitEl) {
+      limitEl.value = invoiceFilters.limit;
+      limitEl.addEventListener('change', async () => {
+        invoiceFilters.limit = Number(limitEl.value) || 10;
+        await renderInvoiceList();
+      });
+    }
+
+    const dateEl = document.getElementById('filterDate');
+
+    if (dateEl) {
+      dateEl.value = '';
+      dateEl.addEventListener('change', async () => {
+        invoiceFilters.date = dateEl.value || null;
+        await renderInvoiceList();
+      });
+    }
+  }
 
   // ----- Kick off -----
   init();

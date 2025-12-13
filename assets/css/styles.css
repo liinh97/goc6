@@ -480,6 +480,40 @@ body.mode-invoices #invoiceList .item{
   text-overflow: ellipsis;
 }
 
+.invoice-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0 12px;
+  border-bottom: 1px dashed #eef1f6;
+  margin-bottom: 8px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-select {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  font-size: 13px;
+  min-width: 110px;
+}
+
+.filter-date {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  background: #fff;
+}
+
+
 /* ===== UTIL ===== */
 .muted{color:var(--muted);font-size:13px}
 .hidden{display:none!important}
@@ -504,5 +538,14 @@ body.mode-invoices #invoiceList .item{
 
   .invoice-actions {
     justify-content: flex-end;
+  }
+
+  .invoice-filters {
+    gap: 8px;
+  }
+
+  .filter-group {
+    flex: 1;
+    min-width: 120px;
   }
 }

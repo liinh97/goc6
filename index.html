@@ -36,6 +36,49 @@
       ">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <strong>Danh sách hoá đơn</strong>
+          <div class="invoice-filters">
+            <!-- Thời gian -->
+            <div class="filter-group">
+              <label class="muted">Thời gian</label>
+
+              <select id="filterTime" class="filter-select">
+                <option value="today">Hôm nay</option>
+                <option value="yesterday">Hôm qua</option>
+                <option value="7days">7 ngày</option>
+                <option value="30days">30 ngày</option>
+                <option value="all">Tất cả</option>
+              </select>
+
+              <!-- chọn ngày cụ thể -->
+              <input
+                type="date"
+                id="filterDate"
+                class="filter-date"
+                title="Chọn ngày cụ thể"
+              />
+            </div>
+
+            <!-- Trạng thái -->
+            <div class="filter-group">
+              <label class="muted">Trạng thái</label>
+              <select id="filterStatus" class="filter-select">
+                <option value="all">Tất cả</option>
+                <option value="1">Đơn mới</option>
+                <option value="2">Đã thanh toán</option>
+                <option value="3">Đã huỷ</option>
+              </select>
+            </div>
+
+            <!-- Số lượng -->
+            <div class="filter-group">
+              <label class="muted">Hiển thị</label>
+              <select id="filterLimit" class="filter-select">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
           <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px;">
             Tải lại
           </button>

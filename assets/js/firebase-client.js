@@ -84,7 +84,7 @@ export async function saveInvoice(metadata) {
  */
 export async function listInvoices(opts = {}) {
   if (!db) throw new Error('Firestore not initialized. Call initFirebase() first.');
-  const lim = Number(opts.limit) || 20;
+  const lim = Number(opts.limit) || 10;
   const col = collection(db, 'invoices');
   let q = query(col, orderBy('createdAtServer', 'desc'), limit(lim));
   // optional where filter (caller can pass opts.where = { field, op, value })
