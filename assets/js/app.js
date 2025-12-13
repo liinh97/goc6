@@ -778,35 +778,35 @@ document.addEventListener('DOMContentLoaded', function () {
         el.className = 'item';
 
         el.innerHTML = `
-          <div class="invoice-main">
-            <div class="name" title="${escapeHtml(name)}">
-              ${escapeHtml(name)}
-            </div>
-            <div class="invoice-meta">
-              <span class="muted">${escapeHtml(time)}</span>
-              <span class="invoice-status ${statusInfo.class}">
-                ${statusInfo.text}
-              </span>
-            </div>
-          </div>
+          <div class="invoice-row">
+            <div class="invoice-left">
+              <div class="invoice-name" title="${escapeHtml(name)}">
+                ${escapeHtml(name)}
+              </div>
 
-          <div class="invoice-actions">
-            <div class="invoice-total">
-              ${total}
+              <div class="invoice-sub">
+                <span class="invoice-time">${escapeHtml(time)}</span>
+                <span class="invoice-status ${statusInfo.class}">
+                  ${statusInfo.text}
+                </span>
+              </div>
             </div>
 
-            <button class="btn small-view" data-id="${id}">
-              Xem
-            </button>
+            <div class="invoice-right">
+              <div class="invoice-total">${total}</div>
 
-            ${
-              d.status === 1
-                ? `
-                  <button class="btn small-pay" data-id="${id}">Đã thanh toán</button>
-                  <button class="btn small-cancel" data-id="${id}">Huỷ đơn</button>
-                `
-                : ''
-            }
+              <div class="invoice-btns">
+                <button class="btn small-view" data-id="${id}">Xem</button>
+                ${
+                  d.status === 1
+                    ? `
+                      <button class="btn small-pay" data-id="${id}" title="Đã thanh toán">✓</button>
+                      <button class="btn small-cancel" data-id="${id}" title="Huỷ đơn">✕</button>
+                    `
+                    : ''
+                }
+              </div>
+            </div>
           </div>
         `;
 

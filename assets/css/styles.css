@@ -351,6 +351,56 @@ body.mode-invoices #invoiceList .item{
   color: #555;
 }
 
+.invoice-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.invoice-left {
+  flex: 1;
+  min-width: 0; /* QUAN TRỌNG: chặn overflow */
+}
+
+.invoice-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoice-sub {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.invoice-time {
+  color: #666;
+  white-space: nowrap;
+}
+
+.invoice-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0; /* KHÔNG BAO GIỜ BỊ ÉP */
+}
+
+.invoice-total {
+  font-weight: 800;
+  white-space: nowrap;
+  margin-bottom: 6px;
+}
+
+.invoice-btns {
+  display: flex;
+  gap: 6px;
+}
+
 .invoice-main .name {
   font-size: 14px;
   font-weight: 700;
@@ -363,12 +413,6 @@ body.mode-invoices #invoiceList .item{
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.invoice-total {
-  font-weight: 800;
-  min-width: 90px;
-  text-align: right;
 }
 
 .invoice-actions .btn{
