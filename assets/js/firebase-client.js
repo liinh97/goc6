@@ -21,7 +21,8 @@ import {
   limit,
   getDocs,
   serverTimestamp,
-  where
+  where,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 let app = null;
@@ -76,6 +77,62 @@ export async function saveInvoice(metadata) {
   };
   const ref = await addDoc(col, payload);
   return { id: ref.id, ref };
+}
+
+/* =========================
+   HELPERS
+========================= */
+function getDayRange(dateStr) {
+  const start = new Date(dateStr);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  return {
+    start: Timestamp.fromDate(start),
+    end: Timestamp.fromDate(end),
+  };
+}
+
+/* =========================
+   LIST INVOICES (QUERY)
+========================= */
+export async function listInvoicesByQuery({
+  status = 'all',
+  date = null,      // yyyy-mm-dd
+  limitNum = 10,
+  cursor = null,    // Firestore DocumentSnapshot
+}) {
+  let q = query(
+    collection(db, 'invoices'),
+    orderBy('createdAt', 'desc'),
+    limit(limitNum)
+  );
+
+  if (status !== 'all') {
+    q = query(q, where('status', '==', Number(status)));
+  }
+
+  if (date) {
+    const { start, end } = getDayRange(date);
+    q = query(
+      q,
+      where('createdAt', '>=', start),
+      where('createdAt', '<', end)
+    );
+  }
+
+  if (cursor) {
+    q = query(q, startAfter(cursor));
+  }
+
+  const snap = await getDocs(q);
+
+  return {
+    rows: snap.docs.map(d => ({ id: d.id, data: d.data() })),
+    lastDoc: snap.docs[snap.docs.length - 1] || null,
+  };
 }
 
 /**

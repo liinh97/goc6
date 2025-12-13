@@ -23,10 +23,14 @@ let currentInvoiceId = null;
 
 // ===== GLOBAL FILTER STATE =====
 const invoiceFilters = {
-  date: null,        // yyyy-mm-dd | null = tất cả
   status: 'all',     // all | 1 | 2 | 3
-  limit: 10,         // số item / trang
-  page: 1            // trang hiện tại (1-based)
+  date: null,        // yyyy-mm-dd
+  limit: 10,
+};
+
+const invoicePaging = {
+  cursorStack: [],
+  currentCursor: null,
 };
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -750,23 +754,23 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   function renderInvoiceItem(row) {
-    const d = row.data || {};
+    const listRoot = document.getElementById('invoiceList');
+    if (!listRoot) return;
+
+    const d = row.data;
     const id = row.id;
 
     const name = d.orderName || '(Không tên)';
-    const createdAt = d.createdAt ? new Date(d.createdAt) : null;
-    const time = createdAt ? createdAt.toLocaleDateString('vi-VN') : '';
+    const dateText = d.createdAt
+      ? d.createdAt.toDate().toLocaleDateString('vi-VN')
+      : '';
 
-    const total =
-      typeof d.total !== 'undefined'
-        ? formatVND(d.total) + ' ₫'
-        : '-';
+    const total = formatVND(d.total || 0) + ' ₫';
 
-    const statusInfo =
-      INVOICE_STATUS_MAP[d.status] || {
-        text: 'Không rõ',
-        class: 'st-unknown',
-      };
+    const statusInfo = INVOICE_STATUS_MAP[d.status] || {
+      text: 'Không rõ',
+      class: 'st-unknown',
+    };
 
     const el = document.createElement('div');
     el.className = 'item invoice-item';
@@ -779,44 +783,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <div class="invoice-footer">
         <div class="invoice-meta">
-          <span class="muted">${escapeHtml(time)}</span>
+          <span class="muted">${dateText}</span>
           <span class="invoice-status ${statusInfo.class}">
             ${statusInfo.text}
           </span>
         </div>
 
         <div class="invoice-actions">
-          <button class="btn small-view" data-id="${id}">Xem</button>
+          <button class="btn small-view">Xem</button>
           ${
             d.status === 1
-              ? `
-                <button class="btn small-pay" data-id="${id}">✓</button>
-                <button class="btn small-cancel" data-id="${id}">✕</button>
-              `
+              ? `<button class="btn small-pay">✓</button>
+                 <button class="btn small-cancel">✕</button>`
               : ''
           }
         </div>
       </div>
     `;
 
-    /* events */
+    listRoot.appendChild(el);
+
     el.querySelector('.small-view')?.addEventListener('click', () =>
       openInvoiceDetailFallback(id, 'view')
     );
 
-    el.querySelector('.small-pay')?.addEventListener('click', () => {
-      if (confirm('Xác nhận đã thanh toán?')) {
-        changeInvoiceStatus(id, 2);
-      }
-    });
+    el.querySelector('.small-pay')?.addEventListener('click', () =>
+      changeInvoiceStatus(id, 2)
+    );
 
-    el.querySelector('.small-cancel')?.addEventListener('click', () => {
-      if (confirm('Xác nhận huỷ đơn?')) {
-        changeInvoiceStatus(id, 3);
-      }
-    });
-
-    return el;
+    el.querySelector('.small-cancel')?.addEventListener('click', () =>
+      changeInvoiceStatus(id, 3)
+    );
   }
 
   function renderInvoiceItems(rows) {
@@ -837,99 +834,75 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  async function renderInvoiceList() {
+  async function renderInvoiceList(resetPaging = false) {
     const listRoot = document.getElementById('invoiceList');
     const emptyEl = document.getElementById('invoiceListEmpty');
     if (!listRoot) return;
 
+    if (resetPaging) {
+      invoicePaging.cursorStack = [];
+      invoicePaging.currentCursor = null;
+    }
+
     listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
     emptyEl.classList.add('hidden');
 
-    if (!window.FBClient?.listInvoices) {
-      listRoot.innerHTML =
-        '<div class="error">FBClient.listInvoices chưa có</div>';
-      return;
-    }
-
     try {
-      const rows = await window.FBClient.listInvoices({
-        limit: 100,
+      const res = await FB.listInvoicesByQuery({
+        status: invoiceFilters.status,
+        date: invoiceFilters.date,
+        limitNum: invoiceFilters.limit,
+        cursor: invoicePaging.currentCursor,
       });
 
-      /* ===== FILTER ===== */
-      const filtered = rows.filter(row => {
-        const d = row.data || {};
+      listRoot.innerHTML = '';
 
-        // status
-        if (invoiceFilters.status !== 'all') {
-          if (String(d.status) !== String(invoiceFilters.status)) return false;
-        }
-
-        // date (lọc theo NGÀY)
-        if (invoiceFilters.date && d.createdAt) {
-          const created = new Date(d.createdAt);
-          const picked = new Date(invoiceFilters.date);
-          return (
-            created.getFullYear() === picked.getFullYear() &&
-            created.getMonth() === picked.getMonth() &&
-            created.getDate() === picked.getDate()
-          );
-        }
-
-        return true;
-      });
-
-      /* ===== PAGINATION ===== */
-      const totalItems = filtered.length;
-      const totalPages = Math.max(
-        1,
-        Math.ceil(totalItems / invoiceFilters.limit)
-      );
-
-      if (invoiceFilters.page > totalPages) {
-        invoiceFilters.page = totalPages;
+      if (!res.rows.length) {
+        emptyEl.classList.remove('hidden');
+        return;
       }
 
-      const start = (invoiceFilters.page - 1) * invoiceFilters.limit;
-      const pageItems = filtered.slice(
-        start,
-        start + invoiceFilters.limit
-      );
-
-      renderInvoiceItems(pageItems);
-
-      /* ===== PAGINATION UI ===== */
-      document.getElementById('pageInfo').textContent =
-        `Trang ${invoiceFilters.page} / ${totalPages}`;
+      res.rows.forEach(renderInvoiceItem);
+      invoicePaging.currentCursor = res.lastDoc;
 
       document.getElementById('prevPageBtn').disabled =
-        invoiceFilters.page <= 1;
+        invoicePaging.cursorStack.length === 0;
 
       document.getElementById('nextPageBtn').disabled =
-        invoiceFilters.page >= totalPages;
+        !res.lastDoc;
 
     } catch (err) {
-      console.error('renderInvoiceList error', err);
-      listRoot.innerHTML = `
-        <div class="error">
-          Lấy danh sách hoá đơn thất bại:
-          ${escapeHtml(err.message || String(err))}
-        </div>
-      `;
+      console.error(err);
+      listRoot.innerHTML =
+        '<div class="error">Không tải được hoá đơn</div>';
     }
   }
 
-  document.getElementById('prevPageBtn')?.addEventListener('click', () => {
-    if (invoiceFilters.page > 1) {
-      invoiceFilters.page--;
-      renderInvoiceList();
-    }
-  });
+  document.getElementById('filterStatus').onchange = e => {
+    invoiceFilters.status = e.target.value;
+    renderInvoiceList(true);
+  };
 
-  document.getElementById('nextPageBtn')?.addEventListener('click', () => {
-    invoiceFilters.page++;
-    renderInvoiceList();
-  });
+  document.getElementById('filterDate').onchange = e => {
+    invoiceFilters.date = e.target.value || null;
+    renderInvoiceList(true);
+  };
+
+  document.getElementById('filterLimit').onchange = e => {
+    invoiceFilters.limit = Number(e.target.value) || 10;
+    renderInvoiceList(true);
+  };
+
+  document.getElementById('nextPageBtn').onclick = async () => {
+    invoicePaging.cursorStack.push(invoicePaging.currentCursor);
+    await renderInvoiceList();
+  };
+
+  document.getElementById('prevPageBtn').onclick = async () => {
+    if (!invoicePaging.cursorStack.length) return;
+    invoicePaging.currentCursor = invoicePaging.cursorStack.pop();
+    await renderInvoiceList();
+  };
 
   function attachInvoiceTabHandlers(){
     const showInvoicesBtn = document.getElementById('showInvoicesBtn');
