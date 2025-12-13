@@ -905,8 +905,9 @@ document.addEventListener('DOMContentLoaded', function () {
               : ''
           }
         </div>
-        ${d.note ? `<div class="invoice-note muted">📝 ${escapeHtml(d.note)}</div>` : ''}
       </div>
+
+      ${d.note ? `<div class="invoice-note muted">📝 ${escapeHtml(d.note)}</div>` : ''}
     `;
 
     /* ===== CLICK ROW → VIEW ===== */
@@ -1069,11 +1070,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const status = Number(data.status || 1);
 
-      // NOTE: chỉ khoá khi HUỶ
-      if (noteInput) {
-        noteInput.disabled = (status === 3);
-      }
-
       currentInvoiceId = id;
 
       // populate compactList (modal)
@@ -1099,6 +1095,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const noteInput = document.getElementById('invoice_note');
       if (noteInput) {
         noteInput.value = data.note || '';
+      }
+
+      // NOTE: chỉ khoá khi HUỶ
+      if (noteInput) {
+        noteInput.disabled = (status === 3);
       }
 
       // disable editing if status != 1
