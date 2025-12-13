@@ -24,9 +24,10 @@ let editingInvoiceData = null; // giữ raw data invoice (optional)
 
 // ===== GLOBAL FILTER STATE =====
 const invoiceFilters = {
-  status: 'all',     // all | 1 | 2 | 3
-  date: null,        // yyyy-mm-dd
+  status: 'all',   // all | 1 | 2 | 3
+  date: null,      // yyyy-mm-dd
   limit: 10,
+  page: 1,
 };
 
 const invoicePaging = {
@@ -823,13 +824,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
-  const invoiceFilters = {
-    status: 'all',   // all | 1 | 2 | 3
-    date: null,      // yyyy-mm-dd
-    limit: 10,
-    page: 1,
-  };
-
   const INVOICE_STATUS_MAP = {
     1: { text: 'Đơn mới', class: 'st-new' },
     2: { text: 'Đã thanh toán', class: 'st-paid' },
@@ -1122,8 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function resetInvoicePaging() {
     invoiceFilters.page = 1;
-    invoiceFilters.cursor = null;
-    invoiceFilters.lastDoc = null;
+    invoicePaging.currentCursor = null;
   }
 
   // fallback: fetch invoice and render basic modal if showInvoiceDetail missing
