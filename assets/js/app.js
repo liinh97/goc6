@@ -740,6 +740,28 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function normalizeDate(createdAt) {
+    if (!createdAt) return null;
+
+    // Firestore Timestamp
+    if (typeof createdAt.toDate === 'function') {
+      return createdAt.toDate();
+    }
+
+    // Number (Date.now)
+    if (typeof createdAt === 'number') {
+      return new Date(createdAt);
+    }
+
+    // String
+    if (typeof createdAt === 'string') {
+      const d = new Date(createdAt);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    return null;
+  }
+
   const invoiceFilters = {
     status: 'all',   // all | 1 | 2 | 3
     date: null,      // yyyy-mm-dd
@@ -761,8 +783,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const id = row.id;
 
     const name = d.orderName || '(Không tên)';
-    const dateText = d.createdAt
-      ? d.createdAt.toDate().toLocaleDateString('vi-VN')
+    const dateObj = normalizeDate(d.createdAt);
+    const dateText = dateObj
+      ? dateObj.toLocaleDateString('vi-VN')
       : '';
 
     const total = formatVND(d.total || 0) + ' ₫';
