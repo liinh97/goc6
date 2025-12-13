@@ -1106,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', function () {
         invoiceListPanel.style.display = visible ? 'none' : 'block';
         showInvoicesBtn.setAttribute('aria-pressed', String(!visible));
         if (!visible) {
+          resetInvoicePaging();
           await renderInvoiceList();
         }
       });
@@ -1113,9 +1114,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async ()=> {
+        resetInvoicePaging();
         await renderInvoiceList();
       });
     }
+  }
+
+  function resetInvoicePaging() {
+    invoiceFilters.page = 1;
+    invoiceFilters.cursor = null;
+    invoiceFilters.lastDoc = null;
   }
 
   // fallback: fetch invoice and render basic modal if showInvoiceDetail missing
@@ -1249,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', function () {
       dateEl.value = invoiceFilters.date || '';
       dateEl.addEventListener('change', async () => {
         invoiceFilters.date = dateEl.value || null;
-        invoiceFilters.page = 1; // reset page
+        resetInvoicePaging();
         await renderInvoiceList();
       });
     }
