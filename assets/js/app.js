@@ -745,7 +745,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         alert('Cập nhật hoá đơn thành công.');
-
       } 
       // =====================================================
       // ================= CREATE NEW INVOICE =================
@@ -774,7 +773,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // ===== RESET STATE =====
-      currentInvoiceId = null;
+      if (invoiceMode !== 'note') {
+        currentInvoiceId = null;
+      }
 
       // refresh invoice list nếu đang mở
       try {
