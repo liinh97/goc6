@@ -699,11 +699,6 @@ document.addEventListener('DOMContentLoaded', function () {
           ? orderInput.value.trim()
           : defaultName;
 
-      if (!currentInvoiceId && items.length === 0) {
-        alert('Chưa có món nào để lưu.');
-        return;
-      }
-
       // ===== ENSURE AUTH =====
       if (window.FBClient?.signInAnonymouslyIfNeeded) {
         await window.FBClient.signInAnonymouslyIfNeeded();
@@ -723,7 +718,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const st = Number(existing.data.status);
 
         if (st === 1) {
-          // ✅ ĐƠN MỚI → update toàn bộ
+          // 🔒 Đơn mới → BẮT BUỘC có items
+          if (items.length === 0) {
+            alert('Chưa có món nào để lưu.');
+            return;
+          }
+
           await window.FBClient.updateInvoice(currentInvoiceId, {
             orderName,
             items,
