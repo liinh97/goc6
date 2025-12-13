@@ -20,16 +20,18 @@ FB.initFirebase(firebaseConfig);
    UI MODE
 ========================= */
 let UI_MODE = 'items'; // items | invoices
+let invoiceLoadedOnce = false;
 
-function setUIMode(mode) {
-  if (!['items', 'invoices'].includes(mode)) return;
-  UI_MODE = mode;
-
+async function setUIMode(mode) {
   document.body.classList.remove('mode-items', 'mode-invoices');
   document.body.classList.add(`mode-${mode}`);
 
   if (mode === 'invoices') {
-    renderInvoiceList();
+    // đảm bảo vào là load
+    if (!invoiceLoadedOnce) {
+      invoiceLoadedOnce = true;
+      await renderInvoiceList();
+    }
   }
 }
 
@@ -189,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function () {
           if(pressed){ favorites.delete(name); favBtn.setAttribute('aria-pressed','false'); }
           else { favorites.add(name); favBtn.setAttribute('aria-pressed','true'); }
           updateFavCount(); applyFilter();
+          if (document.body.classList.contains('mode-invoices')) {
+            setUIMode('items');
+          }
         });
       }
 
