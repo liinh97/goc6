@@ -366,6 +366,44 @@ body.mode-invoices #invoiceList .item{
   color: #d93025;
 }
 
+.invoice-item {
+  align-items: flex-start; /* quan trọng */
+  padding-bottom: 44px;    /* chừa chỗ cho nút */
+}
+
+.invoice-item .invoice-sub {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.invoice-item .invoice-actions {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.invoice-actions .btn{
+  padding:6px 8px;
+  font-size:13px;
+  border-radius:6px;
+}
+
+.invoice-actions .small-pay{
+  background:#f3fff2;
+  border-color:#b7e2b2;
+  color:#0a7d00;
+}
+
+.invoice-actions .small-cancel{
+  background:#fff5f6;
+  border-color:#f2b8c1;
+  color:#b00020;
+}
+
 .invoice-row {
   display: flex;
   justify-content: space-between;
@@ -382,14 +420,6 @@ body.mode-invoices #invoiceList .item{
   font-weight: 700;
   font-size: 15px;
   margin-bottom: 2px;
-}
-
-.invoice-sub {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 12px;
-  flex-wrap: wrap;
 }
 
 .invoice-status {
@@ -430,30 +460,6 @@ body.mode-invoices #invoiceList .item{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.invoice-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.invoice-actions .btn{
-  padding:6px 8px;
-  font-size:13px;
-  border-radius:6px;
-}
-
-.invoice-actions .small-pay{
-  background:#f3fff2;
-  border-color:#b7e2b2;
-  color:#0a7d00;
-}
-
-.invoice-actions .small-cancel{
-  background:#fff5f6;
-  border-color:#f2b8c1;
-  color:#b00020;
 }
 
 /* ===== UTIL ===== */
