@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
         favBtn.addEventListener('click', ()=>{ 
           // 1. nếu đang ở hoá đơn → quay về items NGAY
           if (document.body.classList.contains('mode-invoices')) {
+            console.log('mode-invoices')
             setUIMode('items');
           }
 
