@@ -83,7 +83,7 @@ export async function saveInvoice(metadata) {
 /* =========================
    HELPERS
 ========================= */
-function getDayRange(dateStr) {
+export function getDayRange(dateStr) {
   const start = new Date(dateStr);
   start.setHours(0, 0, 0, 0);
 
@@ -101,39 +101,42 @@ function getDayRange(dateStr) {
 ========================= */
 export async function listInvoicesByQuery({
   status = 'all',
-  date = null,      // yyyy-mm-dd
+  date = null,
   limitNum = 10,
-  cursor = null,    // Firestore DocumentSnapshot
+  cursor = null,
 }) {
-  let q = query(
-    collection(db, 'invoices'),
-    orderBy('createdAt', 'desc'),
-    limit(limitNum)
-  );
-
-  if (status !== 'all') {
-    q = query(q, where('status', '==', Number(status)));
-  }
+  let constraints = [];
 
   if (date) {
     const { start, end } = getDayRange(date);
-    console.log(start, end, date)
-    q = query(
-      q,
+    constraints.push(
       where('createdAt', '>=', start),
       where('createdAt', '<', end)
     );
   }
 
-  if (cursor) {
-    q = query(q, startAfter(cursor));
+  if (status !== 'all') {
+    constraints.push(where('status', '==', Number(status)));
   }
+
+  constraints.push(orderBy('createdAt', 'desc'));
+
+  if (cursor) {
+    constraints.push(startAfter(cursor));
+  }
+
+  constraints.push(limit(limitNum));
+
+  const q = query(
+    collection(db, 'invoices'),
+    ...constraints
+  );
 
   const snap = await getDocs(q);
 
   return {
     rows: snap.docs.map(d => ({ id: d.id, data: d.data() })),
-    lastDoc: snap.docs[snap.docs.length - 1] || null,
+    lastDoc: snap.docs.at(-1) || null,
   };
 }
 
