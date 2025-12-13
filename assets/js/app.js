@@ -841,7 +841,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const name = d.orderName || '(Không tên)';
     const created = d.createdAtServer?.toDate();
-    const time = created ? created.toLocaleDateString('vi-VN') : '';
+    const time = created
+      ? created.toLocaleString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
+      : '';
 
     const total =
       typeof d.total !== 'undefined'
