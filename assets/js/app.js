@@ -779,21 +779,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const listRoot = document.getElementById('invoiceList');
     if (!listRoot) return;
 
-    const d = row.data;
     const id = row.id;
+    const d = row.data || {};
 
     const name = d.orderName || '(Không tên)';
-    const dateObj = normalizeDate(d.createdAt);
-    const dateText = dateObj
-      ? dateObj.toLocaleDateString('vi-VN')
-      : '';
+    const created = d.createdAtServer?.toDate();
+    const time = created ? created.toLocaleDateString('vi-VN') : '';
 
-    const total = formatVND(d.total || 0) + ' ₫';
+    const total =
+      typeof d.total !== 'undefined'
+        ? formatVND(d.total) + ' ₫'
+        : '-';
 
-    const statusInfo = INVOICE_STATUS_MAP[d.status] || {
-      text: 'Không rõ',
-      class: 'st-unknown',
-    };
+    const statusInfo =
+      INVOICE_STATUS_MAP[d.status] || { text: 'Không rõ', class: 'st-unknown' };
 
     const el = document.createElement('div');
     el.className = 'item invoice-item';
@@ -806,37 +805,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <div class="invoice-footer">
         <div class="invoice-meta">
-          <span class="muted">${dateText}</span>
+          <span class="muted">${escapeHtml(time)}</span>
           <span class="invoice-status ${statusInfo.class}">
             ${statusInfo.text}
           </span>
         </div>
 
         <div class="invoice-actions">
-          <button class="btn small-view">Xem</button>
           ${
             d.status === 1
-              ? `<button class="btn small-pay">✓</button>
-                 <button class="btn small-cancel">✕</button>`
+              ? `<button class="btn small-edit">Sửa</button>`
+              : ''
+          }
+          ${
+            d.status === 1
+              ? `
+                <button class="btn small-pay">✓</button>
+                <button class="btn small-cancel">✕</button>
+              `
               : ''
           }
         </div>
       </div>
     `;
 
+    /* ===== CLICK ROW → VIEW ===== */
+    el.addEventListener('click', () => {
+      openInvoiceDetailFallback(id, 'view');
+    });
+
+    /* ===== EDIT ===== */
+    el.querySelector('.small-edit')?.addEventListener('click', e => {
+      e.stopPropagation(); // 🔥 bắt buộc
+      openInvoiceDetailFallback(id, 'edit');
+    });
+
+    /* ===== PAY ===== */
+    el.querySelector('.small-pay')?.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm('Xác nhận đã thanh toán?')) {
+        changeInvoiceStatus(id, 2);
+      }
+    });
+
+    /* ===== CANCEL ===== */
+    el.querySelector('.small-cancel')?.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm('Xác nhận huỷ đơn?')) {
+        changeInvoiceStatus(id, 3);
+      }
+    });
+
     listRoot.appendChild(el);
-
-    el.querySelector('.small-view')?.addEventListener('click', () =>
-      openInvoiceDetailFallback(id, 'view')
-    );
-
-    el.querySelector('.small-pay')?.addEventListener('click', () =>
-      changeInvoiceStatus(id, 2)
-    );
-
-    el.querySelector('.small-cancel')?.addEventListener('click', () =>
-      changeInvoiceStatus(id, 3)
-    );
   }
 
   function renderInvoiceItems(rows) {
