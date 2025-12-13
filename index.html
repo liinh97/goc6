@@ -25,27 +25,29 @@
   </div>
 
   <!-- ===== INVOICE LIST PANEL (ONLY IN INVOICE MODE) ===== -->
-  <div id="invoiceListPanel" style="width:420px; max-width:100%;">
-    <div style="
-      background:#fff;
-      border-radius:10px;
-      padding:10px;
-      border:1px solid #e6e9ef;
-      box-shadow:0 8px 20px rgba(12,24,40,0.04);
-    ">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <strong>Danh sách hoá đơn</strong>
-        <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px;">
-          Tải lại
-        </button>
-      </div>
+  <div class="invoice-list-wrapper">
+    <div id="invoiceListPanel" style="width:420px; max-width:100%;">
+      <div style="
+        background:#fff;
+        border-radius:10px;
+        padding:10px;
+        border:1px solid #e6e9ef;
+        box-shadow:0 8px 20px rgba(12,24,40,0.04);
+      ">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong>Danh sách hoá đơn</strong>
+          <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px;">
+            Tải lại
+          </button>
+        </div>
 
-      <div id="invoiceList" style="max-height:360px; overflow:auto;">
-        <!-- renderInvoiceList() -->
-      </div>
+        <div id="invoiceList" style="max-height:360px; overflow:auto;">
+          <!-- renderInvoiceList() -->
+        </div>
 
-      <div id="invoiceListEmpty" class="muted hidden" style="padding-top:8px;">
-        Chưa có hoá đơn nào.
+        <div id="invoiceListEmpty" class="muted hidden" style="padding-top:8px;">
+          Chưa có hoá đơn nào.
+        </div>
       </div>
     </div>
   </div>
@@ -151,7 +153,7 @@
   </div>
 
   <!-- ===== JS ===== -->
-  <script type="module" src="./assets/js/app.js?v=2"></script>
+  <script type="module" src="./assets/js/app.js?v=6"></script>
 
 </body>
 </html>
