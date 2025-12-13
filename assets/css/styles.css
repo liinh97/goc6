@@ -385,7 +385,7 @@ body.mode-invoices #invoiceList .item{
   width: 100%;
 }
 
-.invoice-footer .muted {
+.muted {
   font-size: 12px;
   margin-right: auto;
 }
