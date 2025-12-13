@@ -435,6 +435,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if(count===0 && listEl) { listEl.innerHTML='<div class="muted">Chưa có món nào được chọn.</div>'; }
 
     if (modalBackdrop) modalBackdrop.style.display = 'flex';
+
+    document.getElementById('saveInvoiceBtn').style.display = 'block';
+
     const closeBtn = document.getElementById('closeModal');
     if (closeBtn) closeBtn.focus();
   }
@@ -820,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // edit (nếu sau này dùng)
       listRoot.querySelectorAll('.small-edit').forEach(btn => {
         btn.addEventListener('click', () => {
-          openInvoiceDetailFallback(btn.dataset.id);
+          openInvoiceDetailFallback(btn.dataset.id, 'edit');
         });
       });
 
@@ -876,7 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // fallback: fetch invoice and render basic modal if showInvoiceDetail missing
-  async function openInvoiceDetailFallback(id, mode = 'new'){
+  async function openInvoiceDetailFallback(id, mode){
     try {
       if (!window.FBClient || typeof window.FBClient.getInvoice !== 'function') {
         alert('Không thể lấy chi tiết hoá đơn: FBClient.getInvoice không có.');
@@ -914,7 +917,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const status = Number(data.status || 1);
       const saveBtn = document.getElementById('saveInvoiceBtn');
 
-      const editable = mode === 'new' && status === 1;
+      const editable = mode === 'edit' && status === 1;
 
       if (orderInput) {
         orderInput.disabled = !editable;
