@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // fallback: fetch invoice and render basic modal if showInvoiceDetail missing
-  async function openInvoiceDetailFallback(id){
+  async function openInvoiceDetailFallback(id, mode = 'view'){
     try {
       if (!window.FBClient || typeof window.FBClient.getInvoice !== 'function') {
         alert('Không thể lấy chi tiết hoá đơn: FBClient.getInvoice không có.');
@@ -913,7 +913,6 @@ document.addEventListener('DOMContentLoaded', function () {
       // disable editing if status != 1
       const status = Number(data.status || 1);
       const saveBtn = document.getElementById('saveInvoiceBtn');
-      const orderInput = document.getElementById('order_name');
 
       const editable = status === 1;
 
