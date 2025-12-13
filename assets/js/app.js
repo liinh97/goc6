@@ -773,9 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // ===== RESET STATE =====
-      if (invoiceMode !== 'note') {
-        currentInvoiceId = null;
-      }
+      // currentInvoiceId = null;
 
       // refresh invoice list nếu đang mở
       try {
