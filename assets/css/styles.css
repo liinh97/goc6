@@ -375,13 +375,14 @@ body.mode-invoices #invoiceList .item{
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  width: 100%;
 }
 
 .invoice-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .invoice-footer .muted {
@@ -392,6 +393,7 @@ body.mode-invoices #invoiceList .item{
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .invoice-actions .btn{
