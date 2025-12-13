@@ -778,12 +778,10 @@ document.addEventListener('DOMContentLoaded', function () {
         el.className = 'item invoice-item';
 
         el.innerHTML = `
-          <div class="meta">
-            <div class="invoice-header">
-              <div class="name">${escapeHtml(name)}</div>
-              <div class="price-badge">
-                ${total}
-              </div>
+          <div class="invoice-header">
+            <div class="name">${escapeHtml(name)}</div>
+            <div class="price-badge">
+              ${total}
             </div>
           </div>
 

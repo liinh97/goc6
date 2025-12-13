@@ -64,6 +64,7 @@ h1{margin:0 0 14px; font-size:20px}
   align-items:flex-start;
   min-height:88px;
   position:relative;
+  margin: 5px;
 }
 
 /* ===== PRODUCT CARD ===== */
@@ -107,18 +108,15 @@ h1{margin:0 0 14px; font-size:20px}
 .value{font-weight:700;color:var(--price-color);font-size:var(--price-font-size)}
 
 .price-badge{
-  position:absolute;
-  right:10px;
-  top:10px;
-  background:#fff;
-  border:1px solid var(--card-border);
-  padding:6px 8px;
-  border-radius:8px;
-  font-weight:700;
-  font-size:var(--price-font-size);
-  color:var(--price-color);
-  box-shadow:0 6px 16px rgba(12,24,40,0.04);
-  white-space:nowrap;
+  position: static;          /* QUAN TRỌNG: bỏ absolute */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+  color: var(--price-color);
 }
 
 .size-group{display:inline-flex;gap:6px;align-items:center}
@@ -367,30 +365,33 @@ body.mode-invoices #invoiceList .item{
 }
 
 .invoice-item {
-  align-items: flex-start; /* quan trọng */
-  padding-bottom: 44px;    /* chừa chỗ cho nút */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.invoice-item .invoice-header {
+.invoice-header {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.invoice-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.invoice-footer .muted {
   font-size: 12px;
 }
 
-.invoice-item .invoice-footer {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-}
-
-.invoice-item .invoice-actions {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+.invoice-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .invoice-actions .btn{
@@ -426,14 +427,22 @@ body.mode-invoices #invoiceList .item{
 .invoice-name {
   font-weight: 700;
   font-size: 15px;
-  margin-bottom: 2px;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invoice-status {
+  margin-left: 8px;
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .invoice-right {
@@ -481,24 +490,18 @@ body.mode-invoices #invoiceList .item{
 }
 
 @media (max-width: 640px) {
-  .invoice-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+  .invoice-header {
+    align-items: center;
   }
 
-  .invoice-right {
+  .invoice-footer {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .invoice-actions {
     width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-  }
-
-  .invoice-total {
-    text-align: left;
-    font-size: 16px;
-  }
-
-  .invoice-btns {
     justify-content: flex-end;
   }
 }
