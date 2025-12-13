@@ -912,13 +912,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // disable editing if status != 1
       const status = Number(data.status || 1);
-      const editable = status === 1;
-      if (orderInput) orderInput.disabled = !editable;
       const saveBtn = document.getElementById('saveInvoiceBtn');
-      if (saveBtn) {
-        saveBtn.disabled = !editable;
-        saveBtn.textContent = editable ? 'Lưu hoá đơn' : (status === 2 ? 'Đã thanh toán - Không thể sửa' : 'Đã huỷ - Không thể sửa');
+      const orderInput = document.getElementById('order_name');
+
+      const editable = status === 1;
+
+      if (orderInput) {
+        orderInput.disabled = !editable;
       }
+
+      if (saveBtn) {
+        if (editable) {
+          saveBtn.style.display = '';
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Lưu hoá đơn';
+        } else {
+          saveBtn.style.display = 'none'; // ⬅️ CHỐT: view thì ẩn luôn
+        }
+      }
+
 
       // render fresh QR by calling existing function
       if (grand > 0) {
