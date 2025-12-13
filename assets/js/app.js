@@ -269,19 +269,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const showFavsBtn = document.getElementById('showFavsBtn');
     if (showFavsBtn) {
+      // init state
       showFavsBtn.classList.toggle('active', filterFavsOnly);
       showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
       applyFilter();
-      showFavsBtn.addEventListener('click', ()=>{
 
-        console.log('test')
+      showFavsBtn.addEventListener('click', () => {
 
-        if (document.body.classList.contains('mode-invoices')) {
+        const isInInvoices = document.body.classList.contains('mode-invoices');
+
+        if (isInInvoices) {
           setUIMode('items');
-          console.log('invoices')
+          filterFavsOnly = true;
+        } else {
+          filterFavsOnly = !filterFavsOnly;
         }
 
-        filterFavsOnly = !filterFavsOnly;
         showFavsBtn.classList.toggle('active', filterFavsOnly);
         showFavsBtn.setAttribute('aria-pressed', String(filterFavsOnly));
         applyFilter();
