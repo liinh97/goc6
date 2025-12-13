@@ -21,6 +21,14 @@ FB.initFirebase(firebaseConfig);
 ========================= */
 let currentInvoiceId = null;
 
+// ===== GLOBAL FILTER STATE =====
+const invoiceFilters = {
+  date: null,        // yyyy-mm-dd | null = tất cả
+  status: 'all',     // all | 1 | 2 | 3
+  limit: 10,         // số item / trang
+  page: 1            // trang hiện tại (1-based)
+};
+
 document.addEventListener('DOMContentLoaded', function () {
 
   let UI_MODE = 'items';
@@ -719,7 +727,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-
   // attach handler (call during init)
   function attachSaveHandler(){
     const btn = document.getElementById('saveInvoiceBtn');
@@ -742,13 +749,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const emptyEl = document.getElementById('invoiceListEmpty');
     if (!listRoot) return;
 
-    const invoiceFilters = {
-      time: 'today',
-      status: 'all',
-      limit: 20,
-      date: null, // yyyy-mm-dd
-    };
-
     listRoot.innerHTML = '<div class="muted">Đang tải...</div>';
     emptyEl.classList.add('hidden');
 
@@ -759,8 +759,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      // lấy 20 hoá đơn gần nhất
-      const rows = await window.FBClient.listInvoices({ limit: invoiceFilters.limit });
+      // lấy 10 hoá đơn gần nhất
+      const rows = await window.FBClient.listInvoices({
+        limit: invoiceFilters.limit,
+      });
 
       listRoot.innerHTML = '';
 
@@ -770,21 +772,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const now = new Date();
-
-      const filteredRows = rows.filter(row => {
+      const filtered = rows.filter(row => {
         const d = row.data || {};
 
-        /* ===== status ===== */
+        // status
         if (invoiceFilters.status !== 'all') {
           if (String(d.status) !== String(invoiceFilters.status)) return false;
         }
 
-        if (!d.createdAt) return true;
-
-        const created = new Date(d.createdAt);
-
-        /* ===== ƯU TIÊN: CHỌN NGÀY CỤ THỂ ===== */
-        if (invoiceFilters.date) {
+        // date (chỉ lọc theo NGÀY)
+        if (invoiceFilters.date && d.createdAt) {
+          const created = new Date(d.createdAt);
           const picked = new Date(invoiceFilters.date);
           return (
             created.getFullYear() === picked.getFullYear() &&
@@ -793,16 +791,37 @@ document.addEventListener('DOMContentLoaded', function () {
           );
         }
 
-        /* ===== FALLBACK: SELECT TIME ===== */
-        const diffDays = (now - created) / 86400000;
-
-        if (invoiceFilters.time === 'today') return diffDays < 1;
-        if (invoiceFilters.time === 'yesterday') return diffDays >= 1 && diffDays < 2;
-        if (invoiceFilters.time === '7days') return diffDays <= 7;
-        if (invoiceFilters.time === '30days') return diffDays <= 30;
-
         return true;
       });
+
+      /* ===== PAGINATION ===== */
+      const totalItems = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / invoiceFilters.limit));
+      if (invoiceFilters.page > totalPages) {
+        invoiceFilters.page = totalPages;
+      }
+
+      const start = (invoiceFilters.page - 1) * invoiceFilters.limit;
+      const pageItems = filtered.slice(start, start + invoiceFilters.limit);
+
+      listRoot.innerHTML = '';
+
+      if (pageItems.length === 0) {
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      pageItems.forEach(renderInvoiceItem); // giữ logic render của bạn
+
+      /* ===== UPDATE PAGINATION UI ===== */
+      document.getElementById('pageInfo').textContent =
+        `Trang ${invoiceFilters.page} / ${totalPages}`;
+
+      document.getElementById('prevPageBtn').disabled =
+        invoiceFilters.page <= 1;
+
+      document.getElementById('nextPageBtn').disabled =
+        invoiceFilters.page >= totalPages;
 
       filteredRows.forEach(row => {
         const id = row.id;
@@ -1018,14 +1037,15 @@ document.addEventListener('DOMContentLoaded', function () {
   attachInvoiceTabHandlers();
 
   function attachInvoiceFilterHandlers() {
-    const timeEl = document.getElementById('filterTime');
+    const dateEl = document.getElementById('filterDate');
     const statusEl = document.getElementById('filterStatus');
     const limitEl = document.getElementById('filterLimit');
 
-    if (timeEl) {
-      timeEl.value = invoiceFilters.time;
-      timeEl.addEventListener('change', async () => {
-        invoiceFilters.time = timeEl.value;
+    if (dateEl) {
+      dateEl.value = invoiceFilters.date || '';
+      dateEl.addEventListener('change', async () => {
+        invoiceFilters.date = dateEl.value || null;
+        invoiceFilters.page = 1; // reset page
         await renderInvoiceList();
       });
     }
@@ -1034,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
       statusEl.value = invoiceFilters.status;
       statusEl.addEventListener('change', async () => {
         invoiceFilters.status = statusEl.value;
+        invoiceFilters.page = 1;
         await renderInvoiceList();
       });
     }
@@ -1042,20 +1063,27 @@ document.addEventListener('DOMContentLoaded', function () {
       limitEl.value = invoiceFilters.limit;
       limitEl.addEventListener('change', async () => {
         invoiceFilters.limit = Number(limitEl.value) || 10;
+        invoiceFilters.page = 1;
         await renderInvoiceList();
       });
     }
 
-    const dateEl = document.getElementById('filterDate');
-
-    if (dateEl) {
-      dateEl.value = '';
-      dateEl.addEventListener('change', async () => {
-        invoiceFilters.date = dateEl.value || null;
+    // pagination
+    document.getElementById('prevPageBtn')?.addEventListener('click', async () => {
+      if (invoiceFilters.page > 1) {
+        invoiceFilters.page--;
         await renderInvoiceList();
-      });
-    }
+      }
+    });
+
+    document.getElementById('nextPageBtn')?.addEventListener('click', async () => {
+      invoiceFilters.page++;
+      await renderInvoiceList();
+    });
   }
+
+
+  attachInvoiceFilterHandlers();
 
   // ----- Kick off -----
   init();

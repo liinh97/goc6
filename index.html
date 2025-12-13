@@ -37,49 +37,28 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <strong>Danh sách hoá đơn</strong>
           <div class="invoice-filters">
-            <!-- Thời gian -->
-            <div class="filter-group">
-              <label class="muted">Thời gian</label>
+            <input type="date" id="filterDate" />
 
-              <select id="filterTime" class="filter-select">
-                <option value="today">Hôm nay</option>
-                <option value="yesterday">Hôm qua</option>
-                <option value="7days">7 ngày</option>
-                <option value="30days">30 ngày</option>
-                <option value="all">Tất cả</option>
-              </select>
+            <select id="filterStatus">
+              <option value="all">Tất cả</option>
+              <option value="1">Đơn mới</option>
+              <option value="2">Đã thanh toán</option>
+              <option value="3">Đã huỷ</option>
+            </select>
 
-              <!-- chọn ngày cụ thể -->
-              <input
-                type="date"
-                id="filterDate"
-                class="filter-date"
-                title="Chọn ngày cụ thể"
-              />
-            </div>
-
-            <!-- Trạng thái -->
-            <div class="filter-group">
-              <label class="muted">Trạng thái</label>
-              <select id="filterStatus" class="filter-select">
-                <option value="all">Tất cả</option>
-                <option value="1">Đơn mới</option>
-                <option value="2">Đã thanh toán</option>
-                <option value="3">Đã huỷ</option>
-              </select>
-            </div>
-
-            <!-- Số lượng -->
-            <div class="filter-group">
-              <label class="muted">Hiển thị</label>
-              <select id="filterLimit" class="filter-select">
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="25">25</option>
-              </select>
-            </div>
+            <select id="filterLimit">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+            </select>
           </div>
+
+          <div class="invoice-pagination">
+            <button class="btn" id="prevPageBtn">← Trước</button>
+            <span id="pageInfo" class="muted">Trang 1</span>
+            <button class="btn" id="nextPageBtn">Sau →</button>
+          </div>
+
           <button class="btn" id="refreshInvoicesBtn" style="padding:6px 10px;">
             Tải lại
           </button>
