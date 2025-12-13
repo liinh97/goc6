@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const { name, variants } = prod;
     const defaultVariant = variants[0];
     const item = document.createElement('div');
-    item.className = 'item';
+    item.className = 'item product-item';
     item.dataset.price = String(defaultVariant.price);
     item.dataset.name = name;
     const hasMultiple = variants.length > 1;
@@ -222,15 +222,19 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function updateBadge(item){
+    if (!item.classList.contains('product-item')) return;
+
+    const qtyInput = item.querySelector('.qty-input');
+    if (!qtyInput) return;
+
     const price = parseRaw(item.dataset.price);
-    const qty = parseInt(item.querySelector('.qty-input').value)||0;
+    const qty = parseInt(qtyInput.value) || 0;
+
     const badge = item.querySelector('.price-badge');
     if(!badge) return;
-    if(qty > 0){
-      badge.textContent = formatVND(price * qty) + ' ₫';
-    } else {
-      badge.textContent = '0 ₫';
-    }
+
+    badge.textContent =
+      qty > 0 ? formatVND(price * qty) + ' ₫' : '0 ₫';
   }
 
   document.getElementById('showInvoicesBtn').onclick=()=>setUIMode('invoices');
@@ -321,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function calculateAll(){
     let total = 0;
     let selectedCount = 0;
-    document.querySelectorAll('.item').forEach(item=>{
+    document.querySelectorAll('.product-item').forEach(item=>{
       if(filterFavsOnly && !favorites.has(item.dataset.name)) return;
       const price = parseRaw(item.dataset.price);
       const qty = parseInt(item.querySelector('.qty-input').value)||0;
@@ -365,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function applyFilter(){
     const anyFavs = favorites.size > 0;
-    document.querySelectorAll('.item').forEach(item=>{
+    document.querySelectorAll('.product-item').forEach(item=>{
       const isFav = favorites.has(item.dataset.name);
       if(filterFavsOnly){
         if(!isFav) item.classList.add('hidden'); else item.classList.remove('hidden');
