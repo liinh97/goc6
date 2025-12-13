@@ -371,7 +371,14 @@ body.mode-invoices #invoiceList .item{
   padding-bottom: 44px;    /* chừa chỗ cho nút */
 }
 
-.invoice-item .invoice-sub {
+.invoice-item .invoice-header {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.invoice-item .invoice-footer {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

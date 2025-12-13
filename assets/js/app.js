@@ -779,30 +779,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
         el.innerHTML = `
           <div class="meta">
-            <div class="name">${escapeHtml(name)}</div>
-
-            <div class="invoice-sub">
-              <span class="muted">${escapeHtml(time)}</span>
-              <span class="invoice-status ${statusInfo.class}">
-                ${statusInfo.text}
-              </span>
+            <div class="invoice-header">
+              <div class="name">${escapeHtml(name)}</div>
+              <div class="price-badge">
+                ${total}
+              </div>
             </div>
           </div>
 
-          <div class="price-badge">
-            ${total}
-          </div>
-
-          <div class="invoice-actions">
-            <button class="btn small-view" data-id="${id}">Xem</button>
-            ${
-              d.status === 1
-                ? `
-                  <button class="btn small-pay" data-id="${id}">✓</button>
-                  <button class="btn small-cancel" data-id="${id}">✕</button>
-                `
-                : ''
-            }
+          <div class="invoice-footer">
+            <span class="muted">${escapeHtml(time)}</span>
+            <span class="invoice-status ${statusInfo.class}">
+              ${statusInfo.text}
+            </span>
+            <div class="invoice-actions">
+              <button class="btn small-view" data-id="${id}">Xem</button>
+              ${
+                d.status === 1
+                  ? `
+                    <button class="btn small-pay" data-id="${id}">✓</button>
+                    <button class="btn small-cancel" data-id="${id}">✕</button>
+                  `
+                  : ''
+              }
+            </div>
           </div>
         `;
 
