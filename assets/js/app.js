@@ -750,7 +750,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     try {
       // lấy 20 hoá đơn gần nhất
-      const rows = await window.FBClient.listInvoices({ limit: 20 });
+      const rows = await window.FBClient.listInvoices({ limit: 10 });
 
       listRoot.innerHTML = '';
 
@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>
 
           <span class="muted">${escapeHtml(time)}</span>
-          
+
           <div class="invoice-footer">
             <span class="invoice-status ${statusInfo.class}">
               ${statusInfo.text}
