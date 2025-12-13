@@ -759,8 +759,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const name = d.orderName || '(Không tên)';
         const time =
-          d.createdAtDisplay ||
-          (d.createdAt ? new Date(d.createdAt).toLocaleString('vi-VN') : '');
+          d.createdAt ||
+          '';
 
         const total =
           typeof d.total !== 'undefined'
