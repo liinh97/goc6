@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function openCompactPopup(){
     const listEl=document.getElementById('compactList'); if (!listEl) return; listEl.innerHTML='';
     let total=0; let count=0;
-    document.querySelectorAll('.item').forEach(item=>{
+    document.querySelectorAll('.product-item').forEach(item=>{
       if(item.classList.contains('hidden')) return;
       const name=item.querySelector('.name').textContent.trim();
       const price=parseRaw(item.dataset.price);
