@@ -489,6 +489,12 @@ body.mode-invoices #invoiceList .item{
   margin-bottom: 8px;
 }
 
+.invoice-note {
+  font-size: 13px;
+  margin-top: 4px;
+  color: #666;
+}
+
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -513,6 +519,18 @@ body.mode-invoices #invoiceList .item{
   background: #fff;
 }
 
+.note-block {
+  margin-top: 10px;
+}
+
+.note-block textarea {
+  width: 100%;
+  resize: none;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
 
 /* ===== UTIL ===== */
 .muted{color:var(--muted);font-size:13px}

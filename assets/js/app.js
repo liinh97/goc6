@@ -672,6 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const discount = discountEl ? parseRaw(discountEl.dataset.raw || discountEl.value) : 0;
       const totalText = document.getElementById('modal_total')?.textContent || '0';
       const total = parseRaw(totalText);
+      const note = document.getElementById('invoice_note')?.value?.trim() || '';
 
       const orderInput = document.getElementById('order_name');
       const now = new Date();
@@ -682,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (items.length === 0) { alert('Chưa có món nào để lưu.'); return; }
 
-      const metadata = { orderName, createdAt, items, ship, discount, total, status };
+      const metadata = { orderName, createdAt, items, ship, discount, total, status, note };
 
       const saveBtn = document.getElementById('saveInvoiceBtn');
       const oldTxt = saveBtn ? saveBtn.textContent : null;
@@ -707,8 +708,15 @@ document.addEventListener('DOMContentLoaded', function () {
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = oldTxt || 'Lưu hoá đơn'; }
           return;
         }
-        // update (partial)
-        await window.FBClient.updateInvoice(currentInvoiceId, metadata);
+
+        if (st === 1) {
+          await window.FBClient.updateInvoice(currentInvoiceId, metadata);
+        } else if (st === 2) {
+          await window.FBClient.updateInvoice(currentInvoiceId, {
+            note,
+          });
+        }
+
         alert('Cập nhật hoá đơn thành công.');
       } else {
         // create new: set status = 1
@@ -829,6 +837,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const orderInput = document.getElementById('order_name');
     if (orderInput) orderInput.value = invoice.orderName || '';
 
+    const noteInput = document.getElementById('invoice_note');
+    if (noteInput) {
+      noteInput.value = data.note || '';
+    }
+
+
     calculateAll();
   }
 
@@ -892,6 +906,7 @@ document.addEventListener('DOMContentLoaded', function () {
               : ''
           }
         </div>
+        ${d.note ? `<div class="invoice-note muted">📝 ${escapeHtml(d.note)}</div>` : ''}
       </div>
     `;
 
@@ -1052,6 +1067,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       const data = res.data;
+
+      const status = Number(data.status || 1);
+
+      // NOTE: chỉ khoá khi HUỶ
+      if (noteInput) {
+        noteInput.disabled = (status === 3);
+      }
+
       currentInvoiceId = id;
 
       // populate compactList (modal)
@@ -1073,6 +1096,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const orderInput = document.getElementById('order_name');
       if (orderInput) { orderInput.value = data.orderName || ''; }
+
+      const noteInput = document.getElementById('invoice_note');
+      if (noteInput) {
+        noteInput.value = data.note || '';
+      }
 
       // disable editing if status != 1
       const status = Number(data.status || 1);
