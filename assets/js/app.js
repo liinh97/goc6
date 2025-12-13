@@ -17,30 +17,27 @@ const firebaseConfig = {
 FB.initFirebase(firebaseConfig);
 
 /* =========================
-   UI MODE
-========================= */
-let UI_MODE = 'items'; // items | invoices
-let invoiceLoadedOnce = false;
-
-async function setUIMode(mode) {
-  document.body.classList.remove('mode-items', 'mode-invoices');
-  document.body.classList.add(`mode-${mode}`);
-
-  if (mode === 'invoices') {
-    // đảm bảo vào là load
-    if (!invoiceLoadedOnce) {
-      invoiceLoadedOnce = true;
-      await renderInvoiceList();
-    }
-  }
-}
-
-/* =========================
    GLOBAL STATE
 ========================= */
 let currentInvoiceId = null;
 
 document.addEventListener('DOMContentLoaded', function () {
+
+  let UI_MODE = 'items';
+  let invoiceLoadedOnce = false;
+
+  async function setUIMode(mode) {
+    document.body.classList.remove('mode-items', 'mode-invoices');
+    document.body.classList.add(`mode-${mode}`);
+
+    if (mode === 'invoices') {
+      if (!invoiceLoadedOnce) {
+        invoiceLoadedOnce = true;
+        await renderInvoiceList();
+      }
+    }
+  }
+
   // ----- Data + init -----
   const RAW = [
     ["Nem TCC",3800],
