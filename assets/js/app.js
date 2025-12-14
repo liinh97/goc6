@@ -1287,10 +1287,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
   attachInvoiceTabHandlers();
 
+  function getTodayYYYYMMDD() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
   function attachInvoiceFilterHandlers() {
     const dateEl = document.getElementById('filterDate');
     const statusEl = document.getElementById('filterStatus');
     const limitEl = document.getElementById('filterLimit');
+
+    invoiceFilters.date = getTodayYYYYMMDD();
+    invoiceFilters.status = 1;
+    invoiceFilters.limit = Number(limitEl?.value || 10);
+    invoiceFilters.page = 1;
 
     if (dateEl) {
       dateEl.value = invoiceFilters.date || '';
