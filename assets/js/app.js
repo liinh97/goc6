@@ -61,9 +61,8 @@ document.addEventListener('DOMContentLoaded', function () {
     ["Nem TCC phomai", {Chín:13000, Sống:11000}],
     ["Bánh rán mặn",8000],
     ["Bánh rán phomai",8000],
-    ["Nem chua thường",7000],
-    ["Nem chua phomai",9000],
-    ["Nem chua vỏ giòn",5000],
+    ["Khoai tây chiên",35000],
+    ["Trà chanh",15000],
     ["Bánh xèo nhật chay", {Nhỏ:30000, To:60000}],
     ["Gà chiên mắm",35000],
     ["Chân gà rút xương",80000],
@@ -94,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  const FAV_INIT = ["Bánh rán mặn", "Bánh rán phomai", "Nem TCC xù", "Nem TCC vỏ giòn", "Nem TCC phomai", "Chân gà rút xương"];
+  const FAV_INIT = ["Bánh rán mặn", "Bánh rán phomai", "Nem TCC xù", "Nem TCC vỏ giòn", "Nem TCC phomai", "Chân gà rút xương", "Khoai tây chiên", "Trà chanh"];
   let favorites = new Set(FAV_INIT.slice());
   let filterFavsOnly = true;
 
@@ -1352,3 +1351,4 @@ document.addEventListener('DOMContentLoaded', function () {
   // ----- Kick off -----
   init();
 });
+
