@@ -55,10 +55,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ----- Data + init -----
   const RAW = [
-    ["Nem TCC",3800],
-    ["Nem TCC xù", {Chín:6500, Sống:4000}],
-    ["Nem TCC vỏ giòn", {Chín:7000, Sống:5000}],
-    ["Nem TCC phomai", {Chín:13000, Sống:11000}],
+    ["Nem TCC",6000],
+    ["Nem TCC xù", {Chín:7000, Sống:4500}],
+    ["Nem TCC vỏ giòn", {Chín:7500, Sống:5500}],
+    ["Nem TCC phomai", {Chín:13500, Sống:11500}],
     ["Bánh rán mặn",8000],
     ["Bánh rán phomai",8000],
     ["Khoai tây chiên",35000],
@@ -70,15 +70,9 @@ document.addEventListener('DOMContentLoaded', function () {
     ["Salad",40000],
     ["Bún thang chay",45000],
     ["Xôi nấm",45000],
-    ["Cốt chay",35000],
-    ["Mọc chay",11000],
-    ["Giò nấm chay",11000],
-    ["Chả cốm chay",12000],
     ["Ruốc nấm",35000],
     ["Xôi cốm",18000],
-    ["Chạo chay",40000],
     ["Cốm xào",18000],
-    ["Canh mọc chay",60000],
   ];
 
   const PRODUCTS = RAW.map(entry => {
