@@ -6,28 +6,31 @@ let _client = null;
 let _products = null;
 
 // ====== CONFIG DEFAULTS (bạn đổi được trong UI) ======
-const DEFAULT_COST_RATIO = 0; // thiếu cost -> ước lượng = giá bán * 50% (tạm)
+const DEFAULT_COST_RATIO = 0; // thiếu cost -> 0% (bán hộ)
 const DEFAULT_EXTRA_EVERY_N = 7;
 const DEFAULT_EXTRA_AVG_COST = 500;
 const DEFAULT_BASE_COST = 2000;
 
 // ====== COST OVERRIDES (bạn điền dần) ======
+// unit cost / 1 đơn vị món
+// cost = 0 => bán hộ
 const ITEM_COST_OVERRIDES = {
   "Nem TCC": 3000,
   "Nem TCC xù": 3000,
   "Nem TCC vỏ giòn": 3000,
-  "Nem TCC phomai": 3000,
-  "Bánh rán phomai": 3000,
-  "Khoai tây chiên": 3000,
-  "Chân gà rút xương": 3000,
-  "Bánh xèo nhật chay": 3000,
-  "Gà chiên mắm": 3000,
-  "Thịt chưng mắm tép": 3000,
-  "Bún thang chay": 3000,
-  "Xôi nấm": 3000,
-  "Ruốc nấm": 3000,
-  "Xôi cốm": 3000,
-  "Cốm xào": 3000,
+  "Nem TCC phomai": 0,     // ví dụ bán hộ
+  "Bánh rán mặn": 0,       // ví dụ bán hộ
+  "Bánh rán phomai": 0,    // ví dụ bán hộ
+  "Khoai tây chiên": 0,
+  "Chân gà rút xương": 0,
+  "Bánh xèo nhật chay": 0,
+  "Gà chiên mắm": 0,
+  "Thịt chưng mắm tép": 0,
+  "Bún thang chay": 0,
+  "Xôi nấm": 0,
+  "Ruốc nấm": 0,
+  "Xôi cốm": 0,
+  "Cốm xào": 0,
 };
 
 export function initStats({ client, products }) {
@@ -48,17 +51,33 @@ export function initStats({ client, products }) {
   const extraEveryNEl = document.getElementById('statsExtraEveryN');
   if (extraEveryNEl) extraEveryNEl.value = String(DEFAULT_EXTRA_EVERY_N);
 
-  btn?.addEventListener('click', () => {
-    console.log('[stats] open');
-    if (backdrop) backdrop.style.display = 'flex';
+  // init date range default = today
+  const today = getTodayYYYYMMDD();
+  const fromEl = document.getElementById('statsFromDate');
+  const toEl = document.getElementById('statsToDate');
+  if (fromEl && !fromEl.value) fromEl.value = today;
+  if (toEl && !toEl.value) toEl.value = today;
+
+  // OPEN (fix: remove hidden because .hidden is display:none!important)
+  btn.addEventListener('click', () => {
+    backdrop.classList.remove('hidden');
+    backdrop.style.display = 'flex';
   });
 
-  closeBtn?.addEventListener('click', () => {
-    if (backdrop) backdrop.style.display = 'none';
+  // CLOSE
+  function close() {
+    backdrop.style.display = 'none';
+    backdrop.classList.add('hidden');
+  }
+
+  closeBtn?.addEventListener('click', close);
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) close();
   });
 
-  backdrop?.addEventListener('click', (e) => {
-    if (e.target === backdrop) backdrop.style.display = 'none';
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !backdrop.classList.contains('hidden')) close();
   });
 
   runBtn.addEventListener('click', async () => {
@@ -74,7 +93,8 @@ async function runStats() {
   if (!summaryEl || !tbody) return;
 
   warnEl?.classList.add('hidden');
-  warnEl && (warnEl.textContent = '');
+  if (warnEl) warnEl.textContent = '';
+
   summaryEl.textContent = 'Đang tải hoá đơn đã thanh toán...';
   tbody.innerHTML = `<tr><td colspan="7" class="muted" style="padding:10px;">Đang tải...</td></tr>`;
 
@@ -92,7 +112,7 @@ async function runStats() {
   const extraAvgCost = parseRaw(document.getElementById('statsExtraAvgCost')?.dataset?.raw || String(DEFAULT_EXTRA_AVG_COST));
 
   // build cost map from products list + overrides
-  const { costMap, estimatedItems } = buildCostMapFromProducts();
+  const { costMap, costZeroItems } = buildCostMapFromProducts();
 
   // load all paid invoices (status=2)
   const invoices = await loadAllPaidInvoices({ fromDate, toDate });
@@ -100,7 +120,7 @@ async function runStats() {
   const result = computeStats({
     invoices,
     costMap,
-    estimatedItems,
+    costZeroItems,
     baseCostPerInvoice: baseCost,
     extraEveryN,
     extraAvgCost,
@@ -111,47 +131,47 @@ async function runStats() {
 
 function buildCostMapFromProducts() {
   const costMap = new Map();
-  const estimatedItems = new Set();
+  const costZeroItems = new Set(); // items cost=0 => bán hộ
 
-  // lấy từ PRODUCTS/state (tuỳ bạn đang giữ đâu)
-  // ưu tiên overrides, thiếu thì estimate theo giá bán * DEFAULT_COST_RATIO
   const productsList = state?.PRODUCTS || _products?.state?.PRODUCTS || [];
 
+  // init from products list
   for (const p of productsList) {
     const name = p?.name;
     if (!name) continue;
 
-    const override = ITEM_COST_OVERRIDES[name];
-    if (isFinite(Number(override))) {
-      costMap.set(name, Number(override));
+    // override first
+    if (Object.prototype.hasOwnProperty.call(ITEM_COST_OVERRIDES, name)) {
+      const v = Number(ITEM_COST_OVERRIDES[name]) || 0;
+      costMap.set(name, v);
+      if (v <= 0) costZeroItems.add(name);
       continue;
     }
 
-    // estimate theo variant đầu (giá bán mặc định)
+    // missing -> estimate by ratio (0%)
     const price = Number(p?.variants?.[0]?.price || 0);
-    const est = Math.round(price * DEFAULT_COST_RATIO);
+    const est = Math.round(price * DEFAULT_COST_RATIO); // 0
     costMap.set(name, est);
-    estimatedItems.add(name);
+    if (est <= 0) costZeroItems.add(name);
   }
 
-  // override cuối cùng để chắc
+  // ensure overrides apply even if not in products list
   for (const [k, v] of Object.entries(ITEM_COST_OVERRIDES)) {
-    if (isFinite(Number(v))) {
-      costMap.set(k, Number(v));
-      estimatedItems.delete(k);
-    }
+    const n = Number(v) || 0;
+    costMap.set(k, n);
+    if (n <= 0) costZeroItems.add(k);
+    else costZeroItems.delete(k);
   }
 
-  return { costMap, estimatedItems };
+  return { costMap, costZeroItems };
 }
 
 async function loadAllPaidInvoices({ fromDate, toDate }) {
   const rows = [];
   let cursor = null;
-  const limitNum = 50; // tránh nặng, tự paging
+  const limitNum = 50;
 
-  // Mẹo: nếu client của bạn hỗ trợ query theo date exact thì range sẽ khó.
-  // Ta load status=2 theo paging, rồi lọc client-side theo createdAtServer.
+  // load all status=2, then filter client-side by createdAtServer
   for (let guard = 0; guard < 200; guard++) {
     const res = await _client.listInvoicesByQuery({
       status: 2,
@@ -167,34 +187,48 @@ async function loadAllPaidInvoices({ fromDate, toDate }) {
     if (!cursor || batch.length === 0) break;
   }
 
-  // lọc theo ngày nếu có
   const filtered = rows.filter(r => {
     const d = r?.data || {};
     const dt = d.createdAtServer?.toDate ? d.createdAtServer.toDate() : null;
     if (!dt) return true;
 
     if (fromDate) {
-      const [y,m,dd] = fromDate.split('-').map(Number);
-      const from = new Date(y, m-1, dd, 0,0,0,0);
-      if (dt < from) return false;
+      const from = parseYYYYMMDDStart(fromDate);
+      if (from && dt < from) return false;
     }
     if (toDate) {
-      const [y,m,dd] = toDate.split('-').map(Number);
-      const to = new Date(y, m-1, dd, 23,59,59,999);
-      if (dt > to) return false;
+      const to = parseYYYYMMDDEnd(toDate);
+      if (to && dt > to) return false;
     }
     return true;
   });
 
-  // return invoice data objects (giống bạn dùng ở invoice UI)
   return filtered.map(r => r.data).filter(Boolean);
 }
 
-function computeStats({ invoices, costMap, estimatedItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
-  let totalRevenue = 0;
-  let totalItemsCost = 0;
-  let totalBaseCost = 0;
+/**
+ * Core rules:
+ * - Ship: ignore completely (khách trả)
+ * - Discount: allocate proportional to items subtotal
+ * - Item with unitCost <= 0 => bán hộ:
+ *     + show row but profit/margin/overhead/cost = 0
+ *     + EXCLUDE from totals revenue/profit
+ *     + EXCLUDE from overhead allocation base
+ * - Overhead (base + expected extra) allocated ONLY among items with cost>0, proportional to net item revenue (after discount share)
+ */
+function computeStats({ invoices, costMap, costZeroItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
   let invoiceCount = 0;
+
+  // totals (ONLY cost>0 group)
+  let totalRevenueIncluded = 0; // doanh thu tính lãi
+  let totalProfitIncluded = 0;  // tổng lãi
+  let totalItemsCostIncluded = 0;
+  let totalOverhead = 0;
+
+  // additional info
+  let totalRevenueAllItems = 0; // tất cả món (sau discount)
+  let totalShip = 0;
+  let totalDiscount = 0;
 
   const expectedExtraPerInvoice = extraEveryN > 0 ? (extraAvgCost / extraEveryN) : 0;
   const perItem = new Map();
@@ -205,52 +239,120 @@ function computeStats({ invoices, costMap, estimatedItems, baseCostPerInvoice, e
 
     invoiceCount++;
 
-    const revenue = Math.max(0, Number(inv.total) || 0);
-    totalRevenue += revenue;
-
     const items = Array.isArray(inv.items) ? inv.items : [];
-    const itemsRevenue = items.reduce((s, it) => s + (Number(it.subtotal) || 0), 0);
+    const ship = Math.max(0, Number(inv.ship) || 0);
+    const discount = Math.max(0, Number(inv.discount) || 0);
 
-    const orderCost = (Number(baseCostPerInvoice) || 0) + expectedExtraPerInvoice;
-    totalBaseCost += orderCost;
+    totalShip += ship;
+    totalDiscount += discount;
 
+    const itemsRevenueGross = items.reduce((s, it) => s + Math.max(0, Number(it.subtotal) || 0), 0);
+
+    // net revenue for each item after discount share
+    // group included revenue base (only cost>0)
+    let includedNetRevenueBase = 0;
+
+    // first pass: compute included base
     for (const it of items) {
-      const name = it?.name || '(Không tên)';
+      const name = String(it?.name || '(Không tên)');
       const qty = Number(it.qty) || 0;
-      const sub = Number(it.subtotal) || 0;
+      const sub = Math.max(0, Number(it.subtotal) || 0);
+      if (!name || qty <= 0 || sub <= 0) continue;
+
+      const discountShare = itemsRevenueGross > 0 ? (discount * (sub / itemsRevenueGross)) : 0;
+      const netSub = Math.max(0, sub - discountShare);
 
       const unitCost = Number(costMap.get(name) ?? 0);
-      const cost = unitCost * qty;
-      totalItemsCost += cost;
+      const passThrough = unitCost <= 0;
 
-      const overheadShare = itemsRevenue > 0 ? orderCost * (sub / itemsRevenue) : 0;
-      const profit = sub - cost - overheadShare;
+      // tổng tiền món (sau discount) - để hiển thị
+      totalRevenueAllItems += netSub;
 
-      const row = perItem.get(name) || { name, qty: 0, revenue: 0, cost: 0, overhead: 0, profit: 0, estimated: false };
+      if (!passThrough) {
+        includedNetRevenueBase += netSub;
+      }
+    }
+
+    const orderOverhead = (Number(baseCostPerInvoice) || 0) + expectedExtraPerInvoice;
+    // overhead chỉ thực sự được "tính lãi" nếu có included items
+    const overheadToAllocate = includedNetRevenueBase > 0 ? orderOverhead : 0;
+    totalOverhead += overheadToAllocate;
+
+    // second pass: aggregate rows
+    for (const it of items) {
+      const name = String(it?.name || '(Không tên)');
+      const qty = Number(it.qty) || 0;
+      const sub = Math.max(0, Number(it.subtotal) || 0);
+      if (!name || qty <= 0 || sub <= 0) continue;
+
+      const discountShare = itemsRevenueGross > 0 ? (discount * (sub / itemsRevenueGross)) : 0;
+      const netSub = Math.max(0, sub - discountShare);
+
+      const unitCost = Number(costMap.get(name) ?? 0);
+      const passThrough = unitCost <= 0;
+
+      let row = perItem.get(name);
+      if (!row) {
+        row = {
+          name,
+          qty: 0,
+          revenue: 0,   // net revenue (after discount)
+          cost: 0,
+          overhead: 0,
+          profit: 0,
+          passThrough: false, // will set true if cost<=0
+        };
+        perItem.set(name, row);
+      }
+
       row.qty += qty;
-      row.revenue += sub;
+      row.revenue += netSub;
+
+      if (passThrough) {
+        row.passThrough = true;
+        // bán hộ: cost/overhead/profit = 0
+        continue;
+      }
+
+      const cost = unitCost * qty;
+      const overheadShare = includedNetRevenueBase > 0 ? (overheadToAllocate * (netSub / includedNetRevenueBase)) : 0;
+      const profit = netSub - cost - overheadShare;
+
       row.cost += cost;
       row.overhead += overheadShare;
       row.profit += profit;
-      row.estimated = row.estimated || estimatedItems.has(name);
-      perItem.set(name, row);
+
+      totalRevenueIncluded += netSub;
+      totalItemsCostIncluded += cost;
+      totalProfitIncluded += profit;
     }
   }
 
-  const totalProfit = totalRevenue - totalItemsCost - totalBaseCost;
-  const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) : 0;
+  const margin = totalRevenueIncluded > 0 ? (totalProfitIncluded / totalRevenueIncluded) : 0;
 
-  const items = [...perItem.values()].sort((a,b) => b.profit - a.profit);
+  const items = [...perItem.values()]
+    .sort((a, b) => (b.profit - a.profit));
+
+  // pass-through list for warning/info
+  const passThroughList = items.filter(x => x.passThrough || (Number(costMap.get(x.name) ?? 0) <= 0)).map(x => x.name);
 
   return {
     invoiceCount,
-    totalRevenue,
-    totalItemsCost,
-    totalBaseCost,
-    totalProfit,
+
+    totalRevenueAllItems,
+    totalRevenueIncluded,
+    totalItemsCostIncluded,
+    totalOverhead,
+    totalProfitIncluded,
     margin,
+
+    totalShip,
+    totalDiscount,
     expectedExtraPerInvoice,
+
     items,
+    passThroughList,
+    costZeroItems: [...costZeroItems],
   };
 }
 
@@ -262,21 +364,34 @@ function renderStats(res) {
 
   summaryEl.innerHTML = `
     <div>Hoá đơn đã thanh toán: <strong>${res.invoiceCount}</strong></div>
-    <div>Tổng doanh thu: <strong>${formatVND(res.totalRevenue)} ₫</strong></div>
-    <div>Tổng cost món: <strong>${formatVND(res.totalItemsCost)} ₫</strong></div>
-    <div>Overhead (base + phát sinh kỳ vọng): <strong>${formatVND(res.totalBaseCost)} ₫</strong>
-      <span class="muted"> (phát sinh kỳ vọng/đơn: ~${formatVND(Math.round(res.expectedExtraPerInvoice))} ₫)</span>
+
+    <div>Tiền món sau giảm (tất cả món): <strong>${formatVND(Math.round(res.totalRevenueAllItems))} ₫</strong></div>
+
+    <div>Doanh thu tính lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalRevenueIncluded))} ₫</strong></div>
+    <div>Tổng lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalProfitIncluded))} ₫</strong>
+      <span class="muted"> (biên lãi ~${(res.margin * 100).toFixed(1)}%)</span>
     </div>
-    <div>Tổng lãi (ước lượng): <strong>${formatVND(Math.round(res.totalProfit))} ₫</strong>
-      <span class="muted"> (biên lãi ~${(res.margin*100).toFixed(1)}%)</span>
+
+    <div class="muted" style="margin-top:6px;">
+      Ship khách trả (không tính): ${formatVND(Math.round(res.totalShip))} ₫ ·
+      Discount tổng: ${formatVND(Math.round(res.totalDiscount))} ₫ ·
+      Overhead/đơn (base + phát sinh kỳ vọng): ~${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫
     </div>
   `;
 
-  // warnings: món đang estimate cost
-  const estimated = res.items.filter(x => x.estimated).map(x => x.name);
-  if (estimated.length && warnEl) {
-    warnEl.classList.remove('hidden');
-    warnEl.textContent = `Cảnh báo: Có ${estimated.length} món CHƯA khai báo cost (đang tính = 0). Lãi đang bị cao hơn thực tế, bạn nên bổ sung cost.`;
+  // info: pass-through items
+  const passThrough = (res.passThroughList || []).filter(Boolean);
+  if (warnEl) {
+    if (passThrough.length) {
+      warnEl.classList.remove('hidden');
+      warnEl.innerHTML = `
+        Có <strong>${passThrough.length}</strong> món đang <strong>cost = 0</strong> (coi như <strong>bán hộ</strong>).
+        Những món này sẽ <strong>không</strong> được cộng vào tổng doanh thu & tổng lãi, nhưng vẫn hiển thị ở bảng (lãi = 0).
+      `;
+    } else {
+      warnEl.classList.add('hidden');
+      warnEl.textContent = '';
+    }
   }
 
   if (!res.items.length) {
@@ -285,23 +400,31 @@ function renderStats(res) {
   }
 
   tbody.innerHTML = res.items.map(r => {
-    const m = r.revenue > 0 ? (r.profit / r.revenue) : 0;
+    const revenue = r.revenue || 0;
+
+    // bán hộ => lãi/margin/overhead/cost = 0
+    const cost = r.passThrough ? 0 : (r.cost || 0);
+    const overhead = r.passThrough ? 0 : (r.overhead || 0);
+    const profit = r.passThrough ? 0 : (r.profit || 0);
+    const m = (!r.passThrough && revenue > 0) ? (profit / revenue) : 0;
+
     return `
       <tr>
         <td style="padding:10px; border-bottom:1px solid #eef1f6;">
-          ${escapeCell(r.name)} ${r.estimated ? `<span class="muted">(cost=0)</span>` : ``}
+          ${escapeCell(r.name)} ${r.passThrough ? `<span class="muted">(bán hộ)</span>` : ``}
         </td>
         <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${r.qty}</td>
-        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(r.revenue)} ₫</td>
-        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(r.cost)} ₫</td>
-        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(Math.round(r.overhead))} ₫</td>
-        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;"><strong>${formatVND(Math.round(r.profit))} ₫</strong></td>
-        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${(m*100).toFixed(1)}%</td>
+        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(Math.round(revenue))} ₫</td>
+        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(Math.round(cost))} ₫</td>
+        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(Math.round(overhead))} ₫</td>
+        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;"><strong>${formatVND(Math.round(profit))} ₫</strong></td>
+        <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${(m * 100).toFixed(1)}%</td>
       </tr>
     `;
   }).join('');
 }
 
+// ===== utils =====
 function escapeCell(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -309,19 +432,22 @@ function escapeCell(s) {
 function setFormattedMoneyInput(id, initial) {
   const el = document.getElementById(id);
   if (!el) return;
+
   el.dataset.raw = String(initial || 0);
   el.value = formatVND(initial || 0);
 
   el.addEventListener('input', e => {
     const digits = (e.target.value || '').replace(/[^0-9]/g, '');
-    const v = parseInt(digits) || 0;
+    const v = parseInt(digits, 10) || 0;
     e.target.dataset.raw = String(v);
     e.target.value = formatVND(v);
   });
 
   el.addEventListener('focus', e => {
     e.target.value = String(e.target.dataset.raw || '0');
-    setTimeout(() => { try { e.target.setSelectionRange(e.target.value.length, e.target.value.length); } catch {} }, 0);
+    setTimeout(() => {
+      try { e.target.setSelectionRange(e.target.value.length, e.target.value.length); } catch {}
+    }, 0);
   });
 
   el.addEventListener('blur', e => {
@@ -329,4 +455,26 @@ function setFormattedMoneyInput(id, initial) {
     e.target.dataset.raw = String(v);
     e.target.value = formatVND(v);
   });
+}
+
+function getTodayYYYYMMDD() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseYYYYMMDDStart(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function parseYYYYMMDDEnd(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
 }
