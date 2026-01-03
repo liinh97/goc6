@@ -179,8 +179,10 @@ export function calculateAll() {
   const discount = discountEl ? parseRaw(discountEl.dataset.raw || discountEl.value) : 0;
 
   const grand = total + ship - discount;
-  document.getElementById('selectedCount')?.textContent = String(selectedCount);
-  document.getElementById('grandTotal')?.textContent = formatVND(Math.max(0, grand));
+  const selectedEl = document.getElementById('selectedCount');
+  if (selectedEl) selectedEl.textContent = String(selectedCount);
+  const grandEl = document.getElementById('grandTotal');
+  if (grandEl) grandEl.textContent = formatVND(Math.max(0, grand));
 
   document.querySelectorAll('.product-item').forEach(updateBadge);
 }
