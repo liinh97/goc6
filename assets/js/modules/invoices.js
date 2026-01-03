@@ -8,21 +8,29 @@ const INVOICE_STATUS_MAP = {
   3: { text: 'Đã huỷ', class: 'st-cancel' },
 };
 
+let _client = null;
+let _products = null;
+let _setUIMode = null;
+
 export function initInvoices({ client, products, setUIMode }) {
   if (!client?.listInvoicesByQuery) {
     console.warn('initInvoices: client.listInvoicesByQuery missing');
   }
 
+  _client = client;
+  _products = products;
+  _setUIMode = typeof setUIMode === 'function' ? setUIMode : null;
+
   attachInvoiceFilterInit();
-  attachInvoiceFilterHandlers({ client, products });
-  attachInvoicePagingHandlers({ client, products });
-  attachInvoiceTabHandlers({ client, products });
-  attachSaveHandler({ client, products });
+  attachInvoiceFilterHandlers({ client: _client, products: _products });
+  attachInvoicePagingHandlers({ client: _client, products: _products });
+  attachInvoiceTabHandlers({ client: _client, products: _products });
+  attachSaveHandler({ client: _client, products: _products });
 
   // row click handlers are attached during render
 }
 
-export async function renderInvoiceList({ client, products, resetPaging = false } = {}) {
+export async function renderInvoiceList({ client = _client, products = _products, resetPaging = false } = {}) {
   const listRoot = document.getElementById('invoiceList');
   const emptyEl = document.getElementById('invoiceListEmpty');
   if (!listRoot) return;
@@ -184,7 +192,7 @@ async function loadInvoiceToItems({ client, products, invoiceId }) {
   products.calculateAll();
 
   // về items mode
-  if (typeof window.setUIMode === 'function') window.setUIMode('items');
+  if (_setUIMode) _setUIMode('items');
   else document.body.classList.remove('mode-invoices'), document.body.classList.add('mode-items');
 }
 
