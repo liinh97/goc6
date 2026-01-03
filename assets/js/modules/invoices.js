@@ -23,7 +23,6 @@ export function initInvoices({ client, products, setUIMode }) {
 }
 
 export async function renderInvoiceList({ client, products, resetPaging = false } = {}) {
-  if (!products) throw new Error('Thiếu products khi renderInvoiceList');
   const listRoot = document.getElementById('invoiceList');
   const emptyEl = document.getElementById('invoiceListEmpty');
   if (!listRoot) return;
