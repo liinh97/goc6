@@ -196,6 +196,7 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
 
     cursor = res?.lastDoc || null;
     if (!cursor || batch.length === 0) break;
+    console.log('[stats] page', guard, 'batch', batch.length, 'hasCursor', !!cursor);
   }
 
   const filtered = rows.filter(r => {
@@ -213,7 +214,6 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
       const to = new Date(y, m - 1, dd, 23, 59, 59, 999);
       if (dt > to) return false;
     }
-    console.log('[stats] page', guard, 'batch', batch.length, 'hasCursor', !!cursor);
     return true;
   });
 
