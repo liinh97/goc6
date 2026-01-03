@@ -14,8 +14,8 @@ export function initInvoices({ client, products, setUIMode }) {
   }
 
   attachInvoiceFilterInit();
-  attachInvoiceFilterHandlers({ client });
-  attachInvoicePagingHandlers({ client });
+  attachInvoiceFilterHandlers({ client, products });
+  attachInvoicePagingHandlers({ client, products });
   attachInvoiceTabHandlers({ client, products });
   attachSaveHandler({ client, products });
 
@@ -405,36 +405,36 @@ function attachInvoiceFilterInit() {
   if (limitEl) limitEl.value = state.invoiceFilters.limit;
 }
 
-function attachInvoiceFilterHandlers({ client }) {
+function attachInvoiceFilterHandlers({ client, products }) {
   document.getElementById('filterStatus')?.addEventListener('change', async (e) => {
     state.invoiceFilters.status = e.target.value;
     resetInvoicePaging();
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 
   document.getElementById('filterDate')?.addEventListener('change', async (e) => {
     state.invoiceFilters.date = e.target.value || null;
     resetInvoicePaging();
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 
   document.getElementById('filterLimit')?.addEventListener('change', async (e) => {
     state.invoiceFilters.limit = Number(e.target.value) || 10;
     resetInvoicePaging();
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 }
 
-function attachInvoicePagingHandlers({ client }) {
+function attachInvoicePagingHandlers({ client, products }) {
   document.getElementById('nextPageBtn')?.addEventListener('click', async () => {
     state.invoicePaging.cursorStack.push(state.invoicePaging.currentCursor);
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 
   document.getElementById('prevPageBtn')?.addEventListener('click', async () => {
     if (!state.invoicePaging.cursorStack.length) return;
     state.invoicePaging.currentCursor = state.invoicePaging.cursorStack.pop();
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 }
 
