@@ -132,7 +132,7 @@ async function runStats() {
     invoices: paidInvoices,
     canceledCount: canceledInvoices.length,
     costMap,
-    estimatedItems,
+    costZeroItems,
     baseCostPerInvoice: baseCost,
     extraEveryN,
     extraAvgCost,
@@ -229,7 +229,7 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
  *     + EXCLUDE from overhead allocation base
  * - Overhead (base + expected extra) allocated ONLY among items with cost>0, proportional to net item revenue (after discount share)
  */
-function computeStats({ invoices, canceledCount = 0, costMap, estimatedItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
+function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
   let invoiceCount = 0;
 
   // totals (ONLY cost>0 group)
