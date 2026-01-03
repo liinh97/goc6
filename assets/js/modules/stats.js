@@ -387,8 +387,8 @@ function renderStats(res) {
     </div>
 
     <div class="muted" style="margin-top:6px;">Tiền ship: ${formatVND(Math.round(res.totalShip))} ₫</div>
-    <div class="muted>Giảm giá: <strong>${formatVND(Math.round(res.totalDiscount))} ₫</strong></div>
-    <div class="muted>Overhead/đơn (base + phát sinh kỳ vọng): ~<strong>${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫</strong></div>
+    <div class="muted">Giảm giá: <strong>${formatVND(Math.round(res.totalDiscount))} ₫</strong></div>
+    <div class="muted">Overhead/đơn (base + phát sinh kỳ vọng): ~<strong>${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫</strong></div>
   `;
 
   // info: pass-through items
