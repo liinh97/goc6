@@ -276,8 +276,8 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
       const passThrough = unitCost <= 0;
 
       // discount chỉ chia cho nhóm cost>0
-      const discountShare = (!passThrough && includedGross > 0)
-        ? (discount * (sub / includedGross))
+      const discountShare = (!passThrough && itemsRevenueGross > 0)
+        ? (discount * (sub / itemsRevenueGross))
         : 0;
       const netSub = Math.max(0, sub - discountShare);
 
