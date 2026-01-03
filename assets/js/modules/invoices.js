@@ -16,13 +16,14 @@ export function initInvoices({ client, products, setUIMode }) {
   attachInvoiceFilterInit();
   attachInvoiceFilterHandlers({ client });
   attachInvoicePagingHandlers({ client });
-  attachInvoiceTabHandlers({ client });
+  attachInvoiceTabHandlers({ client, products });
   attachSaveHandler({ client, products });
 
   // row click handlers are attached during render
 }
 
-export async function renderInvoiceList({ client, resetPaging = false } = {}) {
+export async function renderInvoiceList({ client, products, resetPaging = false } = {}) {
+  if (!products) throw new Error('Thiếu products khi renderInvoiceList');
   const listRoot = document.getElementById('invoiceList');
   const emptyEl = document.getElementById('invoiceListEmpty');
   if (!listRoot) return;
@@ -360,7 +361,7 @@ async function saveInvoiceFlow({ client, products }) {
   }
 }
 
-function attachInvoiceTabHandlers({ client }) {
+function attachInvoiceTabHandlers({ client, products }) {
   const showInvoicesBtn = document.getElementById('showInvoicesBtn');
   const invoiceListPanel = document.getElementById('invoiceListPanel');
   const refreshBtn = document.getElementById('refreshInvoicesBtn');
@@ -372,13 +373,13 @@ function attachInvoiceTabHandlers({ client }) {
     showInvoicesBtn.setAttribute('aria-pressed', String(!visible));
     if (!visible) {
       resetInvoicePaging();
-      await renderInvoiceList({ client });
+      await renderInvoiceList({ client, products });
     }
   });
 
   refreshBtn?.addEventListener('click', async () => {
     resetInvoicePaging();
-    await renderInvoiceList({ client });
+    await renderInvoiceList({ client, products });
   });
 }
 
