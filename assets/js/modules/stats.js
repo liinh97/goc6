@@ -6,16 +6,28 @@ let _client = null;
 let _products = null;
 
 // ====== CONFIG DEFAULTS (bạn đổi được trong UI) ======
-const DEFAULT_COST_RATIO = 0.5; // thiếu cost -> ước lượng = giá bán * 50% (tạm)
+const DEFAULT_COST_RATIO = 0; // thiếu cost -> ước lượng = giá bán * 50% (tạm)
 const DEFAULT_EXTRA_EVERY_N = 7;
 const DEFAULT_EXTRA_AVG_COST = 500;
 const DEFAULT_BASE_COST = 2000;
 
 // ====== COST OVERRIDES (bạn điền dần) ======
 const ITEM_COST_OVERRIDES = {
-  // Ví dụ theo bạn:
-  // "Nem TCC xù": 3000,
-  // "Nem TCC": 3000,
+  "Nem TCC": 3000,
+  "Nem TCC xù": 3000,
+  "Nem TCC vỏ giòn": 3000,
+  "Nem TCC phomai": 3000,
+  "Bánh rán phomai": 3000,
+  "Khoai tây chiên": 3000,
+  "Chân gà rút xương": 3000,
+  "Bánh xèo nhật chay": 3000,
+  "Gà chiên mắm": 3000,
+  "Thịt chưng mắm tép": 3000,
+  "Bún thang chay": 3000,
+  "Xôi nấm": 3000,
+  "Ruốc nấm": 3000,
+  "Xôi cốm": 3000,
+  "Cốm xào": 3000,
 };
 
 export function initStats({ client, products }) {
@@ -263,7 +275,7 @@ function renderStats(res) {
   const estimated = res.items.filter(x => x.estimated).map(x => x.name);
   if (estimated.length && warnEl) {
     warnEl.classList.remove('hidden');
-    warnEl.textContent = `Cảnh báo: Có ${estimated.length} món đang dùng cost ước lượng (tạm = giá bán * 50%). Bạn nên điền cost thật để lãi không bị sai.`;
+    warnEl.textContent = `Cảnh báo: Có ${estimated.length} món CHƯA khai báo cost (đang tính = 0). Lãi đang bị cao hơn thực tế, bạn nên bổ sung cost.`;
   }
 
   if (!res.items.length) {
@@ -276,7 +288,7 @@ function renderStats(res) {
     return `
       <tr>
         <td style="padding:10px; border-bottom:1px solid #eef1f6;">
-          ${escapeCell(r.name)} ${r.estimated ? `<span class="muted">(ước lượng cost)</span>` : ``}
+          ${escapeCell(r.name)} ${r.estimated ? `<span class="muted">(cost=0)</span>` : ``}
         </td>
         <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${r.qty}</td>
         <td style="padding:10px; text-align:right; border-bottom:1px solid #eef1f6;">${formatVND(r.revenue)} ₫</td>
