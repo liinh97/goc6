@@ -196,7 +196,6 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
 
     cursor = res?.lastDoc || null;
     if (!cursor || batch.length === 0) break;
-    console.log('[stats] page', guard, 'batch', batch.length, 'hasCursor', !!cursor);
   }
 
   const filtered = rows.filter(r => {
@@ -381,18 +380,15 @@ function renderStats(res) {
     <div>Hoá đơn đã thanh toán: <strong>${res.invoiceCount}</strong></div>
     <div>Hoá đơn đã huỷ: <strong>${res.canceledCount}</strong></div>
 
-    <div>Tiền món sau giảm (tất cả món): <strong>${formatVND(Math.round(res.totalRevenueAllItems))} ₫</strong></div>
-
+    <div style="margin-top:6px;">Tiền món sau giảm (tất cả món): <strong>${formatVND(Math.round(res.totalRevenueAllItems))} ₫</strong></div>
     <div>Doanh thu tính lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalRevenueIncluded))} ₫</strong></div>
     <div>Tổng lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalProfitIncluded))} ₫</strong>
       <span class="muted"> (biên lãi ~${(res.margin * 100).toFixed(1)}%)</span>
     </div>
 
-    <div class="muted" style="margin-top:6px;">
-      Ship khách trả (không tính): ${formatVND(Math.round(res.totalShip))} ₫ ·
-      Discount tổng: ${formatVND(Math.round(res.totalDiscount))} ₫ ·
-      Overhead/đơn (base + phát sinh kỳ vọng): ~${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫
-    </div>
+    <div class="muted" style="margin-top:6px;">Tiền ship: ${formatVND(Math.round(res.totalShip))} ₫</div>
+    <div class="muted>Giảm giá: <strong>${formatVND(Math.round(res.totalDiscount))} ₫</strong></div>
+    <div class="muted>Overhead/đơn (base + phát sinh kỳ vọng): ~<strong>${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫</strong></div>
   `;
 
   // info: pass-through items
