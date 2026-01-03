@@ -213,10 +213,9 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
       const to = new Date(y, m - 1, dd, 23, 59, 59, 999);
       if (dt > to) return false;
     }
+    console.log('[stats] page', guard, 'batch', batch.length, 'hasCursor', !!cursor);
     return true;
   });
-
-  console.log('[stats] page', 'batch', batch.length, 'hasCursor', !!cursor);
 
   return filtered.map(r => r.data).filter(Boolean);
 }
