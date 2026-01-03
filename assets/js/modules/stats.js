@@ -281,9 +281,6 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
         : 0;
       const netSub = Math.max(0, sub - discountShare);
 
-      const unitCost = Number(costMap.get(name) ?? 0);
-      const passThrough = unitCost <= 0;
-
       // tổng tiền món (sau discount) - để hiển thị
       totalRevenueAllItems += netSub;
 
