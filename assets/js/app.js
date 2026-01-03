@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.classList.add(`mode-${mode}`);
 
     if (mode === 'invoices') {
-      await renderInvoiceList({ client });
+      await renderInvoiceList({ client, products });
     }
   }
 
