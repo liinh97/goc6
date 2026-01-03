@@ -1,15 +1,15 @@
 import * as FB from './firebase-client.js';
 import { getInvoiceClient } from './services/invoiceClient.js';
 
-import { initPayment } from './modules/payment.js?v=1';
-import { initInvoiceUI } from './modules/invoice-ui.js?v=1';
-import { initInvoices, renderInvoiceList } from './modules/invoices.js?v=1';
-import { initStats } from './modules/stats.js?v=1';
-import { state } from './core/state.js?v=1';
+import { initPayment } from './modules/payment.js?v=2';
+import { initInvoiceUI } from './modules/invoice-ui.js?v=2';
+import { initInvoices, renderInvoiceList } from './modules/invoices.js?v=2';
+import { initStats } from './modules/stats.js?v=2';
+import { state } from './core/state.js?v=2';
 
 // NOTE: products.js bạn đã tách thì import tại đây.
 // Mình giả định products.js export: initProducts({RAW,FAV_INIT}), collectInvoiceItems(), resetQuantities(), calculateAll()
-import * as products from './modules/products.js?v=1';
+import * as products from './modules/products.js?v=2';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Firebase init
