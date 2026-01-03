@@ -229,17 +229,25 @@ async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
  *     + EXCLUDE from overhead allocation base
  * - Overhead (base + expected extra) allocated ONLY among items with cost>0, proportional to net item revenue (after discount share)
  */
-function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
+function computeStats({
+  invoices,
+  canceledCount = 0,
+  costMap,
+  costZeroItems,              // Set hoặc array đều được
+  baseCostPerInvoice,
+  extraEveryN,
+  extraAvgCost,
+}) {
   let invoiceCount = 0;
 
   // totals (ONLY cost>0 group)
-  let totalRevenueIncluded = 0; // doanh thu tính lãi
-  let totalProfitIncluded = 0;  // tổng lãi
+  let totalRevenueIncluded = 0; // doanh thu tính lãi (sau discount, chỉ cost>0)
+  let totalProfitIncluded = 0;  // tổng lãi (chỉ cost>0)
   let totalItemsCostIncluded = 0;
   let totalOverhead = 0;
 
   // additional info
-  let totalRevenueAllItems = 0; // tất cả món (sau discount)
+  let totalRevenueAllItems = 0; // tổng tiền món (all items) - bán hộ KHÔNG trừ discount
   let totalShip = 0;
   let totalDiscount = 0;
 
@@ -259,13 +267,22 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
     totalShip += ship;
     totalDiscount += discount;
 
-    const itemsRevenueGross = items.reduce((s, it) => s + Math.max(0, Number(it.subtotal) || 0), 0);
+    // ===== (A) TÍNH includedGross: tổng subtotal của nhóm cost>0 (để chia discount) =====
+    let includedGross = 0;
+    for (const it of items) {
+      const name = String(it?.name || '(Không tên)');
+      const qty = Number(it.qty) || 0;
+      const sub = Math.max(0, Number(it.subtotal) || 0);
+      if (!name || qty <= 0 || sub <= 0) continue;
 
-    // net revenue for each item after discount share
-    // group included revenue base (only cost>0)
+      const unitCost = Number(costMap.get(name) ?? 0);
+      const passThrough = unitCost <= 0;
+      if (!passThrough) includedGross += sub;
+    }
+
+    // ===== (B) TÍNH includedNetRevenueBase (sau discount) để phân bổ overhead =====
     let includedNetRevenueBase = 0;
 
-    // first pass: compute included base
     for (const it of items) {
       const name = String(it?.name || '(Không tên)');
       const qty = Number(it.qty) || 0;
@@ -275,54 +292,59 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
       const unitCost = Number(costMap.get(name) ?? 0);
       const passThrough = unitCost <= 0;
 
-      // discount chỉ chia cho nhóm cost>0
-      const discountShare = (!passThrough && itemsRevenueGross > 0)
-        ? (discount * (sub / itemsRevenueGross))
+      // bán hộ: KHÔNG trừ discount
+      const discountShare = (!passThrough && includedGross > 0)
+        ? (discount * (sub / includedGross))
         : 0;
+
       const netSub = Math.max(0, sub - discountShare);
 
-      // tổng tiền món (sau discount) - để hiển thị
-      totalRevenueAllItems += netSub;
+      // tổng tiền món (all items) để hiển thị: bán hộ giữ nguyên sub
+      totalRevenueAllItems += passThrough ? sub : netSub;
 
       if (!passThrough) {
         includedNetRevenueBase += netSub;
       }
     }
 
+    // ===== (C) overhead chỉ phân bổ cho nhóm cost>0, và chỉ khi invoice có món cost>0 =====
     const orderOverhead = (Number(baseCostPerInvoice) || 0) + expectedExtraPerInvoice;
-    // overhead chỉ thực sự được "tính lãi" nếu có included items
     const overheadToAllocate = includedNetRevenueBase > 0 ? orderOverhead : 0;
     totalOverhead += overheadToAllocate;
 
-    // second pass: aggregate rows
+    // ===== (D) AGGREGATE PER ITEM =====
     for (const it of items) {
       const name = String(it?.name || '(Không tên)');
       const qty = Number(it.qty) || 0;
       const sub = Math.max(0, Number(it.subtotal) || 0);
       if (!name || qty <= 0 || sub <= 0) continue;
 
-      const discountShare = itemsRevenueGross > 0 ? (discount * (sub / itemsRevenueGross)) : 0;
-      const netSub = Math.max(0, sub - discountShare);
-
       const unitCost = Number(costMap.get(name) ?? 0);
       const passThrough = unitCost <= 0;
+
+      // bán hộ: KHÔNG trừ discount
+      const discountShare = (!passThrough && includedGross > 0)
+        ? (discount * (sub / includedGross))
+        : 0;
+
+      const netSub = Math.max(0, sub - discountShare);
 
       let row = perItem.get(name);
       if (!row) {
         row = {
           name,
           qty: 0,
-          revenue: 0,   // net revenue (after discount)
+          revenue: 0,    // hiển thị doanh thu: bán hộ dùng sub, còn lại dùng netSub
           cost: 0,
           overhead: 0,
           profit: 0,
-          passThrough: false, // will set true if cost<=0
+          passThrough: false,
         };
         perItem.set(name, row);
       }
 
       row.qty += qty;
-      row.revenue += netSub;
+      row.revenue += passThrough ? sub : netSub;
 
       if (passThrough) {
         row.passThrough = true;
@@ -331,7 +353,10 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
       }
 
       const cost = unitCost * qty;
-      const overheadShare = includedNetRevenueBase > 0 ? (overheadToAllocate * (netSub / includedNetRevenueBase)) : 0;
+      const overheadShare = includedNetRevenueBase > 0
+        ? (overheadToAllocate * (netSub / includedNetRevenueBase))
+        : 0;
+
       const profit = netSub - cost - overheadShare;
 
       row.cost += cost;
@@ -346,11 +371,11 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
 
   const margin = totalRevenueIncluded > 0 ? (totalProfitIncluded / totalRevenueIncluded) : 0;
 
-  const items = [...perItem.values()]
-    .sort((a, b) => (b.profit - a.profit));
+  const items = [...perItem.values()].sort((a, b) => (b.profit - a.profit));
 
-  // pass-through list for warning/info
-  const passThroughList = items.filter(x => x.passThrough || (Number(costMap.get(x.name) ?? 0) <= 0)).map(x => x.name);
+  const passThroughList = items
+    .filter(x => x.passThrough || (Number(costMap.get(x.name) ?? 0) <= 0))
+    .map(x => x.name);
 
   return {
     invoiceCount,
@@ -369,7 +394,7 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
 
     items,
     passThroughList,
-    costZeroItems: [...costZeroItems],
+    costZeroItems: Array.isArray(costZeroItems) ? costZeroItems : [...(costZeroItems || [])],
   };
 }
 
