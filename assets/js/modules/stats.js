@@ -272,7 +272,13 @@ function computeStats({ invoices, canceledCount = 0, costMap, costZeroItems, bas
       const sub = Math.max(0, Number(it.subtotal) || 0);
       if (!name || qty <= 0 || sub <= 0) continue;
 
-      const discountShare = itemsRevenueGross > 0 ? (discount * (sub / itemsRevenueGross)) : 0;
+      const unitCost = Number(costMap.get(name) ?? 0);
+      const passThrough = unitCost <= 0;
+
+      // discount chỉ chia cho nhóm cost>0
+      const discountShare = (!passThrough && includedGross > 0)
+        ? (discount * (sub / includedGross))
+        : 0;
       const netSub = Math.max(0, sub - discountShare);
 
       const unitCost = Number(costMap.get(name) ?? 0);
