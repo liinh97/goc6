@@ -133,7 +133,7 @@ function renderInvoiceRow({ row, client, products }) {
   el.querySelector('.small-pay')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     if (confirm('Xác nhận đã thanh toán?')) {
-      await changeInvoiceStatus({ client, id, newStatus: 2 });
+      await changeInvoiceStatus({ client, products, id, newStatus: 2 });
     }
   });
 
@@ -141,7 +141,7 @@ function renderInvoiceRow({ row, client, products }) {
   el.querySelector('.small-cancel')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     if (confirm('Xác nhận huỷ đơn?')) {
-      await changeInvoiceStatus({ client, id, newStatus: 3 });
+      await changeInvoiceStatus({ client, products, id, newStatus: 3 });
     }
   });
 
@@ -243,7 +243,7 @@ function applyInvoiceMode({ status, mode }) {
   }
 }
 
-async function changeInvoiceStatus({ client, id, newStatus }) {
+async function changeInvoiceStatus({ client, products, id, newStatus }) {
   try {
     if (typeof client.updateInvoiceStatus !== 'function') throw new Error('Thiếu updateInvoiceStatus');
 
@@ -251,7 +251,7 @@ async function changeInvoiceStatus({ client, id, newStatus }) {
     await client.updateInvoiceStatus(id, newStatus);
 
     alert('Cập nhật trạng thái thành công.');
-    await renderInvoiceList({ client }).catch(() => {});
+    await renderInvoiceList({ client, products }).catch(() => {});
   } catch (err) {
     console.error(err);
     alert('Cập nhật trạng thái thất bại: ' + (err.message || err));
@@ -350,7 +350,7 @@ async function saveInvoiceFlow({ client, products }) {
 
     // reset state + refresh list
     state.currentInvoiceId = null;
-    await renderInvoiceList({ client, resetPaging: true }).catch(() => {});
+    await renderInvoiceList({ client, products, resetPaging: true }).catch(() => {});
 
   } catch (err) {
     console.error('saveInvoiceFlow error', err);
