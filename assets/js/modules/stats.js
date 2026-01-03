@@ -48,16 +48,17 @@ export function initStats({ client, products }) {
   const extraEveryNEl = document.getElementById('statsExtraEveryN');
   if (extraEveryNEl) extraEveryNEl.value = String(DEFAULT_EXTRA_EVERY_N);
 
-  btn.addEventListener('click', () => {
-    backdrop.classList.remove('hidden');
+  btn?.addEventListener('click', () => {
+    console.log('[stats] open');
+    if (backdrop) backdrop.style.display = 'flex';
   });
 
   closeBtn?.addEventListener('click', () => {
-    backdrop.classList.add('hidden');
+    if (backdrop) backdrop.style.display = 'none';
   });
 
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) backdrop.classList.add('hidden');
+  backdrop?.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.style.display = 'none';
   });
 
   runBtn.addEventListener('click', async () => {
