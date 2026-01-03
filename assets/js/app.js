@@ -74,5 +74,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       await renderInvoiceList({ client });
     }
   }
+
+  const showFavsBtn = document.getElementById('showFavsBtn');
+  if (showFavsBtn) {
+    // init UI state
+    showFavsBtn.classList.toggle('active', state.filterFavsOnly);
+    showFavsBtn.setAttribute('aria-pressed', String(state.filterFavsOnly));
+
+    showFavsBtn.addEventListener('click', () => {
+      const isInInvoices = document.body.classList.contains('mode-invoices');
+
+      // giống logic bạn từng có: đang ở invoices thì bấm fav sẽ quay về items + bật lọc
+      if (isInInvoices) {
+        setUIMode('items');
+        state.filterFavsOnly = true;
+      } else {
+        state.filterFavsOnly = !state.filterFavsOnly;
+      }
+
+      showFavsBtn.classList.toggle('active', state.filterFavsOnly);
+      showFavsBtn.setAttribute('aria-pressed', String(state.filterFavsOnly));
+      products.applyFilter();
+    });
+  }
 });
 
