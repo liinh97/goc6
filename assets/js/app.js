@@ -5,7 +5,7 @@ import { initPayment } from './modules/payment.js?v=2';
 import { initInvoiceUI } from './modules/invoice-ui.js?v=2';
 import { initInvoices, renderInvoiceList } from './modules/invoices.js?v=2';
 import { initStats } from './modules/stats.js?v=2';
-import { state } from './core/state.js?v=2';
+import { state } from './core/state.js';
 
 // NOTE: products.js bạn đã tách thì import tại đây.
 // Mình giả định products.js export: initProducts({RAW,FAV_INIT}), collectInvoiceItems(), resetQuantities(), calculateAll()
