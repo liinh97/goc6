@@ -383,10 +383,10 @@ function renderStats(res) {
     <div style="margin-top:6px;">Tiền món sau giảm (tất cả món): <strong>${formatVND(Math.round(res.totalRevenueAllItems))} ₫</strong></div>
     <div>Doanh thu tính lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalRevenueIncluded))} ₫</strong></div>
     <div>Tổng lãi (chỉ món cost > 0): <strong>${formatVND(Math.round(res.totalProfitIncluded))} ₫</strong>
-      <span class="muted"> (biên lãi ~${(res.margin * 100).toFixed(1)}%)</span>
+      <span class="muted"> (biên lãi ~<strong>${(res.margin * 100).toFixed(1)}%</strong>)</span>
     </div>
 
-    <div class="muted" style="margin-top:6px;">Tiền ship: ${formatVND(Math.round(res.totalShip))} ₫</div>
+    <div class="muted" style="margin-top:6px;">Tiền ship: <strong>${formatVND(Math.round(res.totalShip))} ₫</strong></div>
     <div class="muted">Giảm giá: <strong>${formatVND(Math.round(res.totalDiscount))} ₫</strong></div>
     <div class="muted">Overhead/đơn (base + phát sinh kỳ vọng): ~<strong>${formatVND(Math.round(res.expectedExtraPerInvoice + parseRaw(document.getElementById('statsBaseCost')?.dataset?.raw || '0')))} ₫</strong></div>
   `;
