@@ -51,12 +51,15 @@ export function initStats({ client, products }) {
   const extraEveryNEl = document.getElementById('statsExtraEveryN');
   if (extraEveryNEl) extraEveryNEl.value = String(DEFAULT_EXTRA_EVERY_N);
 
-  // init date range default = today
-  const today = getTodayYYYYMMDD();
-  const fromEl = document.getElementById('statsFromDate');
-  const toEl = document.getElementById('statsToDate');
-  if (fromEl && !fromEl.value) fromEl.value = today;
-  if (toEl && !toEl.value) toEl.value = today;
+  // set ngay khi init
+  setTodayRange();
+
+  // OPEN: mỗi lần mở cũng reset về hôm nay
+  btn.addEventListener('click', () => {
+    setTodayRange();
+    backdrop.classList.remove('hidden');
+    backdrop.style.display = 'flex';
+  });
 
   // OPEN (fix: remove hidden because .hidden is display:none!important)
   btn.addEventListener('click', () => {
@@ -83,6 +86,14 @@ export function initStats({ client, products }) {
   runBtn.addEventListener('click', async () => {
     await runStats();
   });
+}
+
+function setTodayRange() {
+  const today = getTodayYYYYMMDD();
+  const fromEl = document.getElementById('statsFromDate');
+  const toEl = document.getElementById('statsToDate');
+  if (fromEl) fromEl.value = today;
+  if (toEl) toEl.value = today;
 }
 
 async function runStats() {
