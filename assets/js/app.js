@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPayment();
   initInvoiceUI({ products });
   initInvoices({ client, products, setUIMode });
-  initStats({ client });
+  initStats({ client, products });
 
   // top controls
   document.getElementById('showInvoicesBtn').onclick = () => setUIMode('invoices');

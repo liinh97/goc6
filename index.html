@@ -189,115 +189,72 @@
     </div>
   </div>
 
-  <!-- ===== MODAL STATISTICAL ===== -->
-  <div class="modal-backdrop hidden" id="statBackdrop" aria-hidden="true">
-    <div class="modal" id="statModal" role="dialog" aria-modal="true" aria-labelledby="statTitle">
-
+  <!-- ===== MODAL STATS ===== -->
+  <div class="modal-backdrop hidden" id="statsBackdrop">
+    <div class="modal" role="document" style="max-width: 980px; width: calc(100% - 24px);">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <h2 id="statTitle" style="margin:0;">Thống kê</h2>
-        <button class="btn" id="closeStatModal" type="button" aria-label="Đóng thống kê">Đóng</button>
+        <h2 style="margin:0;">Thống kê doanh thu & lãi</h2>
+        <button class="btn" id="closeStatsBtn">Đóng</button>
       </div>
 
       <!-- Filters -->
-      <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
-        <div>
-          <label class="muted" style="display:block; margin-bottom:4px;">Từ ngày</label>
-          <input type="date" id="statFromDate" />
-        </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; align-items:end;">
+        <label class="small-muted">
+          Từ ngày
+          <input type="date" id="statsFromDate" />
+        </label>
 
-        <div>
-          <label class="muted" style="display:block; margin-bottom:4px;">Đến ngày</label>
-          <input type="date" id="statToDate" />
-        </div>
+        <label class="small-muted">
+          Đến ngày
+          <input type="date" id="statsToDate" />
+        </label>
 
-        <div>
-          <label class="muted" style="display:block; margin-bottom:4px;">Trạng thái</label>
-          <!-- mặc định chỉ lấy "Đã thanh toán" -->
-          <select id="statStatus">
-            <option value="2" selected>Đã thanh toán</option>
-            <option value="all">Tất cả</option>
-            <option value="1">Đơn mới</option>
-            <option value="3">Đã huỷ</option>
-          </select>
-        </div>
+        <label class="small-muted">
+          Base cost / đơn
+          <input type="text" id="statsBaseCost" value="2000" data-raw="2000" inputmode="numeric"
+                 style="padding:6px; border-radius:6px; border:1px solid #ddd; min-width:120px;" />
+        </label>
 
-        <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn" id="statQuickToday" type="button">Hôm nay</button>
-          <button class="btn" id="statQuick7d" type="button">7 ngày</button>
-          <button class="btn" id="statQuick30d" type="button">30 ngày</button>
-          <button class="btn" id="statRefreshBtn" type="button">Tải thống kê</button>
-        </div>
+        <label class="small-muted">
+          Phát sinh: 1 lần / N đơn
+          <input type="number" id="statsExtraEveryN" value="7" min="1"
+                 style="padding:6px; border-radius:6px; border:1px solid #ddd; width:90px;" />
+        </label>
+
+        <label class="small-muted">
+          Chi phí phát sinh (mỗi lần)
+          <input type="text" id="statsExtraAvgCost" value="500" data-raw="500" inputmode="numeric"
+                 style="padding:6px; border-radius:6px; border:1px solid #ddd; min-width:120px;" />
+        </label>
+
+        <button class="btn" id="runStatsBtn">Chạy thống kê</button>
       </div>
 
-      <!-- Summary cards -->
-      <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
-        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
-          <div class="muted">Tổng doanh thu (đã thanh toán)</div>
-          <div style="font-size:20px; font-weight:700;">
-            <span id="statTotalRevenue">0</span> ₫
-          </div>
-          <div class="small-muted">Số hoá đơn: <strong id="statInvoiceCount">0</strong></div>
-        </div>
-
-        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
-          <div class="muted">Tổng lãi</div>
-          <div style="font-size:20px; font-weight:700;">
-            <span id="statTotalProfit">0</span> ₫
-          </div>
-          <div class="small-muted">
-            Biên lãi: <strong id="statProfitMargin">0%</strong>
-          </div>
-        </div>
-
-        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
-          <div class="muted">Tổng vốn (ước tính)</div>
-          <div style="font-size:20px; font-weight:700;">
-            <span id="statTotalCost">0</span> ₫
-          </div>
-          <div class="small-muted">Tổng món bán ra: <strong id="statTotalItemsQty">0</strong></div>
-        </div>
+      <!-- Summary -->
+      <div style="margin-top:12px; background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px;">
+        <div id="statsSummary" class="muted">Chưa chạy thống kê.</div>
+        <div id="statsWarnings" class="error hidden" style="margin-top:6px;"></div>
       </div>
 
-      <!-- Notes / warnings -->
-      <div id="statHint" class="muted" style="margin-top:10px;">
-        * Chỉ tính từ các hoá đơn trạng thái “Đã thanh toán”. Lãi/vốn sẽ đúng khi bạn có dữ liệu giá vốn theo món.
-      </div>
-
-      <!-- Per-item table -->
-      <div style="margin-top:12px; overflow:auto; border:1px solid #e6e9ef; border-radius:10px; background:#fff;">
-        <table style="width:100%; border-collapse:collapse; min-width:820px;">
+      <!-- Table -->
+      <div style="margin-top:12px; overflow:auto; border:1px solid #e6e9ef; border-radius:10px;">
+        <table style="width:100%; border-collapse:collapse; min-width:860px;">
           <thead>
-            <tr style="text-align:left; border-bottom:1px solid #eef1f6;">
-              <th style="padding:10px;">Món</th>
-              <th style="padding:10px; width:90px;">SL</th>
-              <th style="padding:10px; width:160px;">Doanh thu</th>
-              <th style="padding:10px; width:160px;">Vốn</th>
-              <th style="padding:10px; width:160px;">Lãi</th>
-              <th style="padding:10px; width:110px;">Biên lãi</th>
+            <tr style="background:#f7f8fb;">
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #e6e9ef;">Món</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">SL</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">Doanh thu</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">Cost món</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">Overhead phân bổ</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">Lãi</th>
+              <th style="text-align:right; padding:10px; border-bottom:1px solid #e6e9ef;">Biên lãi</th>
             </tr>
           </thead>
-          <tbody id="statItemTbody">
-            <!-- JS render rows -->
+          <tbody id="statsTableBody">
+            <tr><td colspan="7" class="muted" style="padding:10px;">Chưa có dữ liệu.</td></tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Empty / loading -->
-      <div id="statLoading" class="muted hidden" style="margin-top:10px;">
-        Đang tính toán…
-      </div>
-      <div id="statEmpty" class="muted hidden" style="margin-top:10px;">
-        Không có dữ liệu phù hợp.
-      </div>
-      <div id="statError" class="error hidden" style="margin-top:10px;"></div>
-
-      <!-- Actions -->
-      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-        <button class="btn" id="statExportBtn" type="button">Xuất CSV</button>
-        <button class="btn" id="statCopyBtn" type="button">Copy báo cáo</button>
-        <button class="btn" id="statCloseBtn" type="button">Đóng</button>
-      </div>
-
     </div>
   </div>
 
