@@ -125,13 +125,14 @@ async function runStats() {
   // build cost map from products list + overrides
   const { costMap, costZeroItems } = buildCostMapFromProducts();
 
-  // load all paid invoices (status=2)
-  const invoices = await loadAllPaidInvoices({ fromDate, toDate });
+  const paidInvoices = await loadAllInvoicesByStatus({ status: 2, fromDate, toDate });
+  const canceledInvoices = await loadAllInvoicesByStatus({ status: 3, fromDate, toDate });
 
   const result = computeStats({
-    invoices,
+    invoices: paidInvoices,
+    canceledCount: canceledInvoices.length,
     costMap,
-    costZeroItems,
+    estimatedItems,
     baseCostPerInvoice: baseCost,
     extraEveryN,
     extraAvgCost,
@@ -177,15 +178,14 @@ function buildCostMapFromProducts() {
   return { costMap, costZeroItems };
 }
 
-async function loadAllPaidInvoices({ fromDate, toDate }) {
+async function loadAllInvoicesByStatus({ status, fromDate, toDate }) {
   const rows = [];
   let cursor = null;
   const limitNum = 50;
 
-  // load all status=2, then filter client-side by createdAtServer
   for (let guard = 0; guard < 200; guard++) {
     const res = await _client.listInvoicesByQuery({
-      status: 2,
+      status: status,
       date: null,
       limitNum,
       cursor,
@@ -204,12 +204,14 @@ async function loadAllPaidInvoices({ fromDate, toDate }) {
     if (!dt) return true;
 
     if (fromDate) {
-      const from = parseYYYYMMDDStart(fromDate);
-      if (from && dt < from) return false;
+      const [y, m, dd] = fromDate.split('-').map(Number);
+      const from = new Date(y, m - 1, dd, 0, 0, 0, 0);
+      if (dt < from) return false;
     }
     if (toDate) {
-      const to = parseYYYYMMDDEnd(toDate);
-      if (to && dt > to) return false;
+      const [y, m, dd] = toDate.split('-').map(Number);
+      const to = new Date(y, m - 1, dd, 23, 59, 59, 999);
+      if (dt > to) return false;
     }
     return true;
   });
@@ -227,7 +229,7 @@ async function loadAllPaidInvoices({ fromDate, toDate }) {
  *     + EXCLUDE from overhead allocation base
  * - Overhead (base + expected extra) allocated ONLY among items with cost>0, proportional to net item revenue (after discount share)
  */
-function computeStats({ invoices, costMap, costZeroItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
+function computeStats({ invoices, canceledCount = 0, costMap, estimatedItems, baseCostPerInvoice, extraEveryN, extraAvgCost }) {
   let invoiceCount = 0;
 
   // totals (ONLY cost>0 group)
@@ -349,6 +351,7 @@ function computeStats({ invoices, costMap, costZeroItems, baseCostPerInvoice, ex
 
   return {
     invoiceCount,
+    canceledCount,
 
     totalRevenueAllItems,
     totalRevenueIncluded,
@@ -375,6 +378,7 @@ function renderStats(res) {
 
   summaryEl.innerHTML = `
     <div>Hoá đơn đã thanh toán: <strong>${res.invoiceCount}</strong></div>
+    <div>Hoá đơn đã huỷ: <strong>${res.canceledCount}</strong></div>
 
     <div>Tiền món sau giảm (tất cả món): <strong>${formatVND(Math.round(res.totalRevenueAllItems))} ₫</strong></div>
 
