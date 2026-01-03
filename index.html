@@ -189,6 +189,118 @@
     </div>
   </div>
 
+  <!-- ===== MODAL STATISTICAL ===== -->
+  <div class="modal-backdrop hidden" id="statBackdrop" aria-hidden="true">
+    <div class="modal" id="statModal" role="dialog" aria-modal="true" aria-labelledby="statTitle">
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <h2 id="statTitle" style="margin:0;">Thống kê</h2>
+        <button class="btn" id="closeStatModal" type="button" aria-label="Đóng thống kê">Đóng</button>
+      </div>
+
+      <!-- Filters -->
+      <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div>
+          <label class="muted" style="display:block; margin-bottom:4px;">Từ ngày</label>
+          <input type="date" id="statFromDate" />
+        </div>
+
+        <div>
+          <label class="muted" style="display:block; margin-bottom:4px;">Đến ngày</label>
+          <input type="date" id="statToDate" />
+        </div>
+
+        <div>
+          <label class="muted" style="display:block; margin-bottom:4px;">Trạng thái</label>
+          <!-- mặc định chỉ lấy "Đã thanh toán" -->
+          <select id="statStatus">
+            <option value="2" selected>Đã thanh toán</option>
+            <option value="all">Tất cả</option>
+            <option value="1">Đơn mới</option>
+            <option value="3">Đã huỷ</option>
+          </select>
+        </div>
+
+        <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" id="statQuickToday" type="button">Hôm nay</button>
+          <button class="btn" id="statQuick7d" type="button">7 ngày</button>
+          <button class="btn" id="statQuick30d" type="button">30 ngày</button>
+          <button class="btn" id="statRefreshBtn" type="button">Tải thống kê</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
+          <div class="muted">Tổng doanh thu (đã thanh toán)</div>
+          <div style="font-size:20px; font-weight:700;">
+            <span id="statTotalRevenue">0</span> ₫
+          </div>
+          <div class="small-muted">Số hoá đơn: <strong id="statInvoiceCount">0</strong></div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
+          <div class="muted">Tổng lãi</div>
+          <div style="font-size:20px; font-weight:700;">
+            <span id="statTotalProfit">0</span> ₫
+          </div>
+          <div class="small-muted">
+            Biên lãi: <strong id="statProfitMargin">0%</strong>
+          </div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #e6e9ef; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(12,24,40,0.04);">
+          <div class="muted">Tổng vốn (ước tính)</div>
+          <div style="font-size:20px; font-weight:700;">
+            <span id="statTotalCost">0</span> ₫
+          </div>
+          <div class="small-muted">Tổng món bán ra: <strong id="statTotalItemsQty">0</strong></div>
+        </div>
+      </div>
+
+      <!-- Notes / warnings -->
+      <div id="statHint" class="muted" style="margin-top:10px;">
+        * Chỉ tính từ các hoá đơn trạng thái “Đã thanh toán”. Lãi/vốn sẽ đúng khi bạn có dữ liệu giá vốn theo món.
+      </div>
+
+      <!-- Per-item table -->
+      <div style="margin-top:12px; overflow:auto; border:1px solid #e6e9ef; border-radius:10px; background:#fff;">
+        <table style="width:100%; border-collapse:collapse; min-width:820px;">
+          <thead>
+            <tr style="text-align:left; border-bottom:1px solid #eef1f6;">
+              <th style="padding:10px;">Món</th>
+              <th style="padding:10px; width:90px;">SL</th>
+              <th style="padding:10px; width:160px;">Doanh thu</th>
+              <th style="padding:10px; width:160px;">Vốn</th>
+              <th style="padding:10px; width:160px;">Lãi</th>
+              <th style="padding:10px; width:110px;">Biên lãi</th>
+            </tr>
+          </thead>
+          <tbody id="statItemTbody">
+            <!-- JS render rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty / loading -->
+      <div id="statLoading" class="muted hidden" style="margin-top:10px;">
+        Đang tính toán…
+      </div>
+      <div id="statEmpty" class="muted hidden" style="margin-top:10px;">
+        Không có dữ liệu phù hợp.
+      </div>
+      <div id="statError" class="error hidden" style="margin-top:10px;"></div>
+
+      <!-- Actions -->
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="btn" id="statExportBtn" type="button">Xuất CSV</button>
+        <button class="btn" id="statCopyBtn" type="button">Copy báo cáo</button>
+        <button class="btn" id="statCloseBtn" type="button">Đóng</button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ===== JS ===== -->
   <script type="module" src="./assets/js/app.js?v=62"></script>
 
